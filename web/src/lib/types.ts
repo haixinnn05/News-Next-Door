@@ -62,6 +62,59 @@ export interface ZapFeed {
   applications: ZapApplication[];
 }
 
+export type CityTopic = "weather" | "politics" | "housing" | "transit" | "business" | "arts" | "crime" | "sports" | "schools" | "health" | "newyork";
+
+export interface CityArticle {
+  id: string;
+  headline: string;
+  dek: string | null;
+  lead?: string | null;
+  keywords?: string[];
+  url: string;
+  date: string | null;
+  section: string | null;
+  topic: CityTopic;
+  source: "nyt-rss" | "nyt-search";
+}
+
+export interface CityNewsFeed {
+  source: { name: string; rss_url: string; search: boolean; fetched_at: string };
+  articles: CityArticle[];
+}
+
+export interface CityFacts {
+  who: string | null;
+  what: string | null;
+  where: string | null;
+  when: string | null;
+}
+
+export interface CityBriefing {
+  article: CityArticle;
+  summary_en: string;
+  points: string[];
+  facts: CityFacts;
+  model: string | null;
+}
+
+export interface CityTranslation {
+  lang: string;
+  headline: string;
+  dek: string | null;
+  section: string | null;
+  summary: string;
+  points: string[];
+  facts: CityFacts;
+}
+
+export interface CityAudioView {
+  available: boolean;
+  language: string;
+  status: "none" | "pending" | "ready" | "failed";
+  url: string | null;
+  error: string | null;
+}
+
 export interface PublicEvent {
   id: string;
   key: string;
@@ -171,6 +224,7 @@ export interface MyProposals {
   following: (ProposalCard & { phone: string })[];
   phones: string[];
   applications: ZapApplication[];
+  city: CityArticle[];
 }
 
 /** Audio for a live city application: the city's record read aloud, and an ElevenLabs Chinese dub. */

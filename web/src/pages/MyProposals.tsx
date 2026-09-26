@@ -1,14 +1,16 @@
+import { NewsStory } from "../components/NewsFeed";
 import { ProposalCardView } from "../components/ProposalCard";
 import { ApplicationCard } from "./Application";
 import { useAccount } from "../lib/account";
 import { api } from "../lib/api";
 import { useLang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
+import { storyFromCity } from "../lib/story";
 
 export function MyProposals() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { user, loading, openSignIn, savedIds } = useAccount();
-  const res = useLoad(() => (user ? api.myProposals() : Promise.resolve(null)), [user?.id, savedIds.size]);
+  const res = useLoad(() => (user ? api.myProposals(lang) : Promise.resolve(null)), [user?.id, savedIds.size, lang]);
 
   if (loading) return <div className="container page" />;
   if (!user)
@@ -36,8 +38,11 @@ export function MyProposals() {
       </div>
       {!m ? (
         <div className="skeleton" style={{ height: 180 }} />
-      ) : m.saved.length || m.applications.length ? (
+      ) : m.saved.length || m.applications.length || (m.city ?? []).length ? (
         <div className="grid-3">
+          {(m.city ?? []).map((a) => (
+            <NewsStory key={a.id} story={storyFromCity(a)} />
+          ))}
           {m.applications.map((a) => (
             <ApplicationCard key={a.id} a={a} />
           ))}

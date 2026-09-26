@@ -29,6 +29,8 @@ import { createAppFollowCode, createFollowCode, followStatus, handleInbound } fr
 import { BOARDS, boardById, DEFAULT_BOARD_ID } from "../lib/boards.ts";
 import { communityDistrictBoundary } from "../services/boundary.ts";
 import { locateAddress, locatePoint, suggestAddresses } from "../services/locate.ts";
+import { cityAudioFile, cityAudioView, cityBriefing, requestCityAudio, translateBriefing, translateCityList } from "../services/cityBriefings.ts";
+import { cityNews } from "../services/nyt.ts";
 import { applicationById, districtApplications } from "../services/zap.ts";
 
 const MIME: Record<string, string> = { ".mp3": "audio/mpeg", ".flac": "audio/flac", ".pdf": "application/pdf", ".html": "text/html; charset=utf-8" };
@@ -129,7 +131,10 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
 
   app.get("/api/me/proposals", async (c) => {
     const user = await requireUser(c);
-    return c.json(await myProposals(db, user.id, maskHandle));
+    const mine = await myProposals(db, user.id, maskHandle);
+    const lang = c.req.query("lang") || "en";
+    if (lang !== "en" && mine.city.length) mine.city = await translateCityList(mine.city, lang);
+    return c.json(mine);
   });
   app.put("/api/me/saved/:id", async (c) => {
     const user = await requireUser(c);
@@ -166,6 +171,31 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
     const board = boardById(c.req.query("board") || DEFAULT_BOARD_ID);
     if (!board) throw new HttpError(404, "Unknown community board");
     return c.json(await districtApplications(board));
+  });
+
+  app.get("/api/city-news", async (c) => {
+    const feed = await cityNews();
+    const lang = c.req.query("lang") || "en";
+    const articles = lang === "en" ? feed.articles : await translateCityList(feed.articles, lang);
+    return c.json({
+      ...feed,
+      articles: articles.map((article) => ({ ...article, lead: null, keywords: [] })),
+    });
+  });
+  app.get("/api/city-news/:id", async (c) => c.json(await cityBriefing(c.req.param("id"))));
+  app.post("/api/city-news/:id/translate", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { language?: string };
+    return c.json(await translateBriefing(c.req.param("id"), body.language || "en"));
+  });
+  app.get("/api/city-news/:id/audio", (c) => c.json(cityAudioView(c.req.param("id"), c.req.query("lang") || "en")));
+  app.post("/api/city-news/:id/audio", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { language?: string };
+    return c.json(await requestCityAudio(c.req.param("id"), body.language || "en"));
+  });
+  app.get("/media/city-audio/:id/:lang", (c) => {
+    const file = cityAudioFile(c.req.param("id"), c.req.param("lang"));
+    if (!file) throw new HttpError(404, "Audio not found");
+    return sendFile(c, file, "audio/mpeg");
   });
 
   app.get("/api/applications/:id", async (c) => c.json(await applicationById(c.req.param("id"))));

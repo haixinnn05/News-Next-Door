@@ -3,9 +3,20 @@ import { all, get, run, type Db } from "../db.ts";
 import { HttpError, nowIso } from "../lib/util.ts";
 import { boardById } from "../lib/boards.ts";
 import { getProposal, proposalCard, type ProposalRow } from "./proposals.ts";
+import { articleById, type CityArticle } from "./nyt.ts";
 import { applicationById, type ZapApplication } from "./zap.ts";
 
 const visible = (p: ProposalRow | undefined): p is ProposalRow => !!p && !!p.published && (!p.is_sample || config.showSampleData);
+
+function snapshotCity(json: string): CityArticle | null {
+  try {
+    const article = JSON.parse(json) as CityArticle;
+    if (article && typeof article.id === "string" && typeof article.headline === "string" && typeof article.url === "string") return article;
+  } catch {
+    /* stored card is unreadable */
+  }
+  return null;
+}
 
 function snapshotOf(json: string): ZapApplication | null {
   try {
@@ -97,7 +108,17 @@ export async function myProposals(db: Db, userId: string, maskHandle: (h: string
       if (snap) applications.push(snap);
     }
   }
-  return { saved, following, phones, applications };
+  const cityRows = all<{ article_id: string; snapshot_json: string }>(db, "SELECT article_id, snapshot_json FROM saved_city_news WHERE user_id = ? ORDER BY created_at DESC", userId);
+  const city: CityArticle[] = [];
+  for (const row of cityRows) {
+    try {
+      city.push(await articleById(row.article_id));
+    } catch {
+      const snap = snapshotCity(row.snapshot_json);
+      if (snap) city.push(snap);
+    }
+  }
+  return { saved, following, phones, applications, city };
 }
 
 export async function setSaved(db: Db, userId: string, proposalId: string, saved: boolean) {
@@ -106,19 +127,40 @@ export async function setSaved(db: Db, userId: string, proposalId: string, saved
     else run(db, "DELETE FROM saved_proposals WHERE user_id = ? AND proposal_id = ?", userId, proposalId);
     return;
   }
-  const existing = get<{ project_id: string }>(db, "SELECT project_id FROM saved_applications WHERE user_id = ? AND project_id = ?", userId, proposalId);
+  const existingApp = get<{ project_id: string }>(db, "SELECT project_id FROM saved_applications WHERE user_id = ? AND project_id = ?", userId, proposalId);
+  const existingCity = get<{ article_id: string }>(db, "SELECT article_id FROM saved_city_news WHERE user_id = ? AND article_id = ?", userId, proposalId);
   if (!saved) {
-    if (!existing) throw new HttpError(404, "Proposal not found");
-    run(db, "DELETE FROM saved_applications WHERE user_id = ? AND project_id = ?", userId, proposalId);
-    return;
+    if (existingApp) {
+      run(db, "DELETE FROM saved_applications WHERE user_id = ? AND project_id = ?", userId, proposalId);
+      return;
+    }
+    if (existingCity) {
+      run(db, "DELETE FROM saved_city_news WHERE user_id = ? AND article_id = ?", userId, proposalId);
+      return;
+    }
+    throw new HttpError(404, "Proposal not found");
   }
-  const app = await applicationById(proposalId);
+  try {
+    const app = await applicationById(proposalId);
+    run(
+      db,
+      "INSERT INTO saved_applications (user_id, project_id, snapshot_json, created_at) VALUES (?,?,?,?) ON CONFLICT(user_id, project_id) DO UPDATE SET snapshot_json = excluded.snapshot_json",
+      userId,
+      app.id,
+      JSON.stringify(app),
+      nowIso(),
+    );
+    return;
+  } catch {
+    /* not a live city application — try city news */
+  }
+  const article = await articleById(proposalId);
   run(
     db,
-    "INSERT INTO saved_applications (user_id, project_id, snapshot_json, created_at) VALUES (?,?,?,?) ON CONFLICT(user_id, project_id) DO UPDATE SET snapshot_json = excluded.snapshot_json",
+    "INSERT INTO saved_city_news (user_id, article_id, snapshot_json, created_at) VALUES (?,?,?,?) ON CONFLICT(user_id, article_id) DO UPDATE SET snapshot_json = excluded.snapshot_json",
     userId,
-    app.id,
-    JSON.stringify(app),
+    article.id,
+    JSON.stringify(article),
     nowIso(),
   );
 }

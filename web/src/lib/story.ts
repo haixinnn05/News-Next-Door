@@ -1,8 +1,10 @@
 import { fmtDateLong, titleOf } from "./format";
 import type { Lang } from "./i18n";
-import type { ProposalCard, ZapApplication } from "./types";
+import type { CityArticle, ProposalCard, ZapApplication } from "./types";
+import { zhCivic } from "./zhCivic";
 
-export type Topic = "housing" | "parks" | "buildings" | "buses";
+export type AppTopic = "housing" | "parks" | "buildings";
+export type Topic = AppTopic | "buses" | "city" | "weather" | "politics" | "transit" | "business" | "arts" | "crime" | "sports" | "schools" | "health" | "newyork";
 
 export interface Story {
   id: string;
@@ -12,6 +14,9 @@ export interface Story {
   topic: Topic;
   location: string | null;
   sourceUrl: string | null;
+  dek?: string | null;
+  kicker?: string | null;
+  external?: boolean;
 }
 
 export function streetOf(label: string | null | undefined): string | null {
@@ -20,52 +25,15 @@ export function streetOf(label: string | null | undefined): string | null {
   return street || null;
 }
 
-export function topicOfApp(a: ZapApplication): Topic {
-  const blob = `${a.name} ${a.brief ?? ""}`;
-  if (/park/i.test(blob)) return "parks";
-  if (/apartment|housing|residential|mixed-use|\bMIH\b/i.test(blob)) return "housing";
+export function topicOfApp(a: ZapApplication): AppTopic {
+  const blob = `${a.name} ${a.brief ?? ""} ${a.actions.map((action) => action.label).join(" ")}`;
+  if (/park|open space|site selection/i.test(blob)) return "parks";
+  if (/apartment|housing|residential|mixed-use|\bMIH\b|dwelling/i.test(blob)) return "housing";
   return "buildings";
 }
 
 export function headlineOfApp(a: ZapApplication, lang: Lang): string {
-  const street = streetOf(a.location?.label);
-  const park = topicOfApp(a) === "parks";
-  if (park && !street) {
-    const nearby: Record<Lang, string> = {
-      en: "A park nearby",
-      zh: "附近的一座公园",
-      es: "Un parque cerca",
-      fr: "Un parc tout près",
-      ja: "近くの公園",
-      hi: "पास का एक पार्क",
-      ar: "حديقة قريبة",
-      ru: "Парк рядом",
-    };
-    return nearby[lang];
-  }
-  if (!street) return a.name;
-  const line: Record<Lang, (place: string) => string> = park
-    ? {
-        en: (place) => `A park at ${place}`,
-        zh: (place) => `${place} 的公园`,
-        es: (place) => `Un parque en ${place}`,
-        fr: (place) => `Un parc à ${place}`,
-        ja: (place) => `${place}の公園`,
-        hi: (place) => `${place} पर एक पार्क`,
-        ar: (place) => `حديقة في ${place}`,
-        ru: (place) => `Парк на ${place}`,
-      }
-    : {
-        en: (place) => `A building plan at ${place}`,
-        zh: (place) => `${place} 的建房计划`,
-        es: (place) => `Un plan de construcción en ${place}`,
-        fr: (place) => `Un projet de bâtiment à ${place}`,
-        ja: (place) => `${place}の建設計画`,
-        hi: (place) => `${place} पर एक निर्माण योजना`,
-        ar: (place) => `خطة بناء في ${place}`,
-        ru: (place) => `План строительства на ${place}`,
-      };
-  return line[lang](street);
+  return zhCivic(a.name, lang);
 }
 
 export function storyFromApp(a: ZapApplication, lang: Lang): Story {
@@ -77,6 +45,25 @@ export function storyFromApp(a: ZapApplication, lang: Lang): Story {
     topic: topicOfApp(a),
     location: streetOf(a.location?.label),
     sourceUrl: a.zap_url,
+  };
+}
+
+function cityPlace(section: string | null): string | null {
+  if (!section) return "New York";
+  if (/n\.y|new york|nyregion|metro|region/i.test(section)) return "New York";
+  return section;
+}
+
+export function storyFromCity(a: CityArticle): Story {
+  return {
+    id: a.id,
+    href: `/c/${encodeURIComponent(a.id)}`,
+    headline: a.headline,
+    date: a.date,
+    topic: a.topic,
+    location: cityPlace(a.section),
+    sourceUrl: a.url,
+    dek: a.dek,
   };
 }
 

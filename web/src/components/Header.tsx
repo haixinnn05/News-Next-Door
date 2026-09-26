@@ -7,10 +7,14 @@ export function SideNav() {
   const { path, navigate } = useRouter();
   const { user, loading, signOut } = useAccount();
   const items = [
-    { to: "/", label: t("home"), on: path === "/" || path.startsWith("/discover") || path.startsWith("/a/") || path.startsWith("/p/") },
-    { to: "/about", label: t("about"), on: path === "/about" },
+    { to: "/", label: t("home"), on: path === "/" || path.startsWith("/discover") || path.startsWith("/a/") || path.startsWith("/c/") || path.startsWith("/p/") },
     { to: "/how-it-works", label: t("howItWorks"), on: path === "/how-it-works" },
-    ...(user ? [{ to: "/profile", label: t("profile"), on: path === "/profile" }] : []),
+    ...(user
+      ? [
+          { to: "/me", label: t("myProposals"), on: path === "/me" },
+          { to: "/profile", label: t("profile"), on: path === "/profile" },
+        ]
+      : []),
   ];
   const choices = user ? LANGS.filter((l) => langs.includes(l.id)) : LANGS;
   const shown = choices.length ? choices : LANGS.filter((l) => l.id === lang);

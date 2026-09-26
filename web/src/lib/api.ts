@@ -1,4 +1,4 @@
-import type { AddressSuggestion, AppAudioView, Board, DistrictGeometry, FollowResponse, LocateResult, Meta, MyProposals, ProposalDetail, SearchResponse, ZapApplication, ZapFeed } from "./types";
+import type { AddressSuggestion, AppAudioView, Board, CityAudioView, CityBriefing, CityNewsFeed, CityTranslation, DistrictGeometry, FollowResponse, LocateResult, Meta, MyProposals, ProposalDetail, SearchResponse, ZapApplication, ZapFeed } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -30,6 +30,11 @@ export const api = {
   locateAt: (s: AddressSuggestion) => request<LocateResult>(`/api/locate?${new URLSearchParams({ lat: String(s.lat), lng: String(s.lng), label: s.label })}`),
   suggest: (q: string, signal?: AbortSignal) => request<AddressSuggestion[]>(`/api/locate/suggest?q=${encodeURIComponent(q)}`, { signal }),
   applications: (boardId: string) => request<ZapFeed>(`/api/applications?board=${encodeURIComponent(boardId)}`),
+  cityNews: (lang = "en") => request<CityNewsFeed>(`/api/city-news?lang=${encodeURIComponent(lang)}`),
+  cityStory: (id: string) => request<CityBriefing>(`/api/city-news/${encodeURIComponent(id)}`),
+  translateCity: (id: string, language: string) => request<CityTranslation>(`/api/city-news/${encodeURIComponent(id)}/translate`, json("POST", { language })),
+  cityAudio: (id: string, language: string) => request<CityAudioView>(`/api/city-news/${encodeURIComponent(id)}/audio?lang=${encodeURIComponent(language)}`),
+  requestCityAudio: (id: string, language: string) => request<CityAudioView>(`/api/city-news/${encodeURIComponent(id)}/audio`, json("POST", { language })),
   application: (id: string) => request<ZapApplication>(`/api/applications/${encodeURIComponent(id)}`),
   summarize: (id: string, language: string) => request<{ summary: string; model: string }>(`/api/applications/${encodeURIComponent(id)}/summarize`, json("POST", { language })),
   appAudio: (id: string) => request<AppAudioView>(`/api/applications/${encodeURIComponent(id)}/audio`),
@@ -39,7 +44,7 @@ export const api = {
   follow: (id: string, language: string) => request<FollowResponse>(`/api/proposals/${id}/follow`, json("POST", { language })),
   followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "expired" | "unknown" }>(`/api/follow/${code}`),
   simSend: (handle: string, text: string) => request<{ action: string }>("/api/sim/inbound", json("POST", { handle, text })),
-  myProposals: () => request<MyProposals>("/api/me/proposals"),
+  myProposals: (lang = "en") => request<MyProposals>(`/api/me/proposals?lang=${encodeURIComponent(lang)}`),
   zone: () => request<{ board_id: string | null }>("/api/me/zone"),
   setZone: (boardId: string) => request<{ board_id: string }>("/api/me/zone", json("PUT", { board_id: boardId })),
   setProfile: (name: string) => request<{ name: string }>("/api/me/profile", json("PUT", { name })),

@@ -49,6 +49,85 @@ export async function grokJson<T>(opts: {
   }
 }
 
+function responsesText(body: {
+  output_text?: string;
+  output?: { type?: string; text?: string; content?: string | { type?: string; text?: string }[] }[];
+}): string {
+  if (body.output_text?.trim()) return body.output_text;
+  const parts: string[] = [];
+  for (const item of body.output ?? []) {
+    if (typeof item.text === "string") parts.push(item.text);
+    if (typeof item.content === "string") parts.push(item.content);
+    if (Array.isArray(item.content)) {
+      for (const chunk of item.content) {
+        if (typeof chunk === "string") parts.push(chunk);
+        else if ((chunk.type === "output_text" || chunk.type === "text") && chunk.text) parts.push(chunk.text);
+      }
+    }
+  }
+  return parts.join("\n").trim();
+}
+
+function parseJsonObject<T>(text: string): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new HttpError(502, "Grok returned invalid JSON.");
+    return JSON.parse(match[0]) as T;
+  }
+}
+
+/** Ask Grok to open a live page (web search) and return structured JSON. */
+export async function grokWebJson<T>(opts: {
+  system: string;
+  user: string;
+  schemaName: string;
+  schema: Record<string, unknown>;
+  model?: string;
+  maxTokens?: number;
+  allowedDomains?: string[];
+}): Promise<{ data: T; model: string }> {
+  if (!config.grok.enabled) throw new HttpError(503, "XAI_API_KEY is not configured.");
+  const model = opts.model ?? config.grok.model;
+  const res = await fetch(`${config.grok.baseUrl}/responses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.grok.apiKey}` },
+    body: JSON.stringify({
+      model,
+      store: false,
+      instructions: opts.system,
+      input: [{ role: "user", content: opts.user }],
+      tools: [
+        {
+          type: "web_search",
+          ...(opts.allowedDomains?.length ? { filters: { allowed_domains: opts.allowedDomains } } : {}),
+        },
+      ],
+      ...(opts.maxTokens ? { max_output_tokens: opts.maxTokens } : {}),
+    }),
+    signal: AbortSignal.timeout(180_000),
+  });
+  const body = (await res.json().catch(() => ({}))) as {
+    model?: string;
+    output_text?: string;
+    output?: { type?: string; content?: { type?: string; text?: string }[] }[];
+    error?: { message?: string } | string;
+  };
+  if (!res.ok) {
+    const msg = typeof body.error === "string" ? body.error : body.error?.message;
+    throw new HttpError(502, `Grok request failed (${res.status}): ${msg ?? "unknown error"}`);
+  }
+  const content = responsesText(body);
+  if (!content) throw new HttpError(502, "Grok returned no content.");
+  try {
+    return { data: parseJsonObject<T>(content), model: body.model ?? model };
+  } catch (err) {
+    if (err instanceof HttpError) throw err;
+    throw new HttpError(502, "Grok returned invalid JSON.");
+  }
+}
+
 const nullableString = { type: ["string", "null"] } as const;
 
 export const TRANSLATION_SCHEMA = {

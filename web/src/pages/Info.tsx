@@ -1,59 +1,12 @@
+import { useAccount } from "../lib/account";
 import { useLang } from "../lib/i18n";
-import { useMeta } from "../lib/meta";
 import { Link } from "../lib/router";
-
-export function About() {
-  const { lang } = useLang();
-  const meta = useMeta();
-  if (lang === "zh")
-    return (
-      <div className="container page prose">
-        <h1>关于 News Next Door</h1>
-        <p>社区委员会的文件通常很长、很专业，而且只有英文。News Next Door 把皇后区第二社区委员会（长岛市、阳光园、伍德赛德、马斯佩斯）的官方文件，整理成通俗易懂的提案卡片、英文和中文语音简报，以及 iMessage 提醒。</p>
-        <h2>我们的原则</h2>
-        <ul>
-          <li>每项事实都链接到原始文件的具体页面；来源中未列出的信息会标注“来源中未列出”。</li>
-          <li>社区委员会的讨论不等于最终投票。我们保留文件中实际的机构、会议类型和决策阶段。</li>
-          <li>中文内容为机器翻译，除非标注已审核。</li>
-          <li>只有在您主动发送代码后，我们才会发送消息。回复 STOP 立即退订。</li>
-        </ul>
-        <p>这是一个独立的黑客松原型，与社区委员会或纽约市政府无关。</p>
-      </div>
-    );
-  return (
-    <div className="container page prose">
-      <h1>About News Next Door</h1>
-      <p>
-        Community board documents are long, technical, and usually English-only. News Next Door turns official documents from {meta?.board.name ?? "Queens Community Board 2"} (Long Island City, Sunnyside, Woodside, Maspeth) into plain-language proposal cards, short English and Chinese audio briefings, and iMessage reminders, so residents can take part before decisions are made.
-      </p>
-      <h2>Principles</h2>
-      <ul>
-        <li>Every fact links to the page of the official document it came from. If the source doesn't say, we show “Not listed in source.”</li>
-        <li>A community board discussion is not a final vote. We keep the actual body, meeting type, and decision stage from each source.</li>
-        <li>Chinese text and audio are generated translations unless marked as reviewed.</li>
-        <li>We only message people who text us a follow code first. Reply STOP to unsubscribe instantly.</li>
-        <li>Sample proposals and DEMO events are labelled everywhere they appear. Demo dates never replace real government dates.</li>
-      </ul>
-      <h2>Built with</h2>
-      <ul>
-        <li><strong>Grok (xAI)</strong> reads each official document and extracts a structured draft with verbatim evidence, which a teammate reviews before anything is published.</li>
-        <li><strong>ElevenLabs</strong> narrates the reviewed English briefing and dubs it into Chinese.</li>
-        <li><strong>Photon</strong> delivers follow confirmations and reminders over iMessage.</li>
-      </ul>
-      <p>
-        This is an independent hackathon prototype, not affiliated with the community board or the City of New York. Official documents:{" "}
-        <a className="link" href={meta?.board.documentsPage ?? "https://www.nyc.gov/site/queenscb2/meetings/committee-agendas-minutes.page"} target="_blank" rel="noreferrer">
-          Queens CB2 committee agendas &amp; minutes
-        </a>
-        .
-      </p>
-    </div>
-  );
-}
 
 export function HowItWorks() {
   const { lang } = useLang();
+  const { user, zoneId } = useAccount();
   const zh = lang === "zh";
+  const exploreTo = user && zoneId ? "/" : "/?scope=city";
   const steps = zh
     ? [
         ["1. 导入官方文件", "团队上传社区委员会的 PDF 或网页，并填写官方链接和发布日期。系统保留每一页的文字。"],
@@ -76,8 +29,8 @@ export function HowItWorks() {
           <p>{p}</p>
         </div>
       ))}
-      <p style={{ marginTop: 28 }}>
-        <Link to="/discover" className="btn primary">
+      <p className="how-cta">
+        <Link to={exploreTo} className="news-cta">
           {zh ? "开始探索" : "Explore proposals"}
         </Link>
       </p>

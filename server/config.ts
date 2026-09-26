@@ -56,6 +56,9 @@ export const config = {
       return this.apiKey.length > 0;
     },
   },
+  nyt: {
+    apiKey: env("NYT_API_KEY"),
+  },
   photon: {
     projectId: env("SPECTRUM_PROJECT_ID"),
     projectSecret: env("SPECTRUM_PROJECT_SECRET"),
