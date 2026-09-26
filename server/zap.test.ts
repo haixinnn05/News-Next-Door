@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { locateApplications, normalizeZapRows, type ZapRow } from "./services/zap.ts";
+import { applicationById, communityDistrictClause, includesDistrict, locateApplications, normalizeZapRows, type ZapRow } from "./services/zap.ts";
 
 const row = (over: Partial<ZapRow>): ZapRow => ({
   project_id: "2023Q0177",
@@ -24,7 +24,7 @@ test("normalize keeps active public Queens CB2 applications and drops the rest",
     row({ project_id: "other", project_name: "Other district", community_district: "Q05" }),
     row({ project_id: "private", project_name: "Hidden", dcp_visibility: "Agency Only" }),
     row({ project_id: "shared", project_name: "Shared district", community_district: "Q01,Q02", public_status: "Filed", current_milestone_date: "2026-02-20T00:00:00.000" }),
-  ]);
+  ], "Q02");
   assert.deepEqual(
     apps.map((a) => a.id),
     ["2023Q0177", "shared"],
@@ -39,10 +39,21 @@ test("normalize keeps active public Queens CB2 applications and drops the rest",
   assert.equal(apps[1].districts, "Queens CB 1, Queens CB 2");
   assert.equal(apps[1].public_status, "Filed");
   assert.equal(apps[0].location, null);
+  assert.equal(includesDistrict("Q10", "Q01"), false);
+  assert.equal(includesDistrict("Q01,Q02", "Q01"), true);
+  assert.equal(normalizeZapRows([row({ community_district: "Q10", project_name: "Not Q01" })], "Q01").length, 0);
+  assert.equal(normalizeZapRows([row({ community_district: "K01", project_id: "bk", project_name: "Greenpoint" })], "K01")[0]?.districts, "Brooklyn CB 1");
+  assert.match(communityDistrictClause("M04"), /community_district = 'M04'/);
+  assert.throws(() => communityDistrictClause("Q02; drop"), /Invalid/);
+});
+
+test("applicationById rejects ids that are not city project ids", async () => {
+  await assert.rejects(() => applicationById("Q02; drop"), /Application not found/);
+  await assert.rejects(() => applicationById("bk"), /Application not found/);
 });
 
 test("locateApplications pins each project at the centroid of its tax lots", () => {
-  const [app] = normalizeZapRows([row({ project_id: "2023Q0177", project_name: "50-02 Queens Blvd Rezoning" })]);
+  const [app] = normalizeZapRows([row({ project_id: "2023Q0177", project_name: "50-02 Queens Blvd Rezoning" })], "Q02");
   const [located] = locateApplications(
     [app],
     [

@@ -5,6 +5,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { ProposalArt } from "../components/Illustration";
 import { CategoryChip } from "../components/ProposalCard";
 import { useToast } from "../components/Toast";
+import { useAccount } from "../lib/account";
 import { api } from "../lib/api";
 import { eventTypeLabel, fmtDate, fmtEventWhen, fmtTime, stageLabel, summaryOf, titleOf } from "../lib/format";
 import { useLang, type Lang } from "../lib/i18n";
@@ -30,6 +31,31 @@ const FIELD_LABEL: Record<string, [string, string]> = {
   proposed_by: ["Proposed by", "提案方"],
   participation: ["How to participate", "参与方式"],
 };
+
+export function SaveButton({ proposalId }: { proposalId: string }) {
+  const { t } = useLang();
+  const toast = useToast();
+  const { user, savedIds, setSaved, openSignIn } = useAccount();
+  const [busy, setBusy] = useState(false);
+  const saved = savedIds.has(proposalId);
+  const onClick = async () => {
+    if (!user) return openSignIn();
+    setBusy(true);
+    try {
+      await setSaved(proposalId, !saved);
+      toast(saved ? t("removedToast") : t("savedToast"));
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button className={`btn sm${saved ? " saved" : ""}`} aria-pressed={saved} disabled={busy} onClick={() => void onClick()}>
+      <Icon name={saved ? "check" : "bookmark"} size={15} /> {saved ? t("saved") : t("save")}
+    </button>
+  );
+}
 
 export function ProposalPage({ id, tab }: { id: string; tab?: string }) {
   const { t, lang } = useLang();
@@ -88,8 +114,9 @@ export function ProposalPage({ id, tab }: { id: string; tab?: string }) {
           <button className="btn sm" onClick={share}>
             <Icon name="share" size={15} /> {t("share")}
           </button>
+          <SaveButton proposalId={p.id} />
           <button className="btn primary sm" onClick={() => setFollowing(true)}>
-            <Icon name="bookmark" size={15} /> {t("follow")}
+            <Icon name="bell" size={15} /> {t("follow")}
           </button>
         </div>
       </div>
@@ -304,7 +331,7 @@ function AudioTab({ p }: { p: ProposalDetail }) {
             <Icon name="info" size={15} />
             {zh?.translation_review === "reviewed" ? t("reviewedTranslation") : t("generatedTranslation")}
             {zh?.status === "ready" && zh.method && (
-              <span className="subtle xs">· {zh.method === "dubbing" ? "ElevenLabs Dubbing" : "Grok translation + ElevenLabs voice"}</span>
+              <span className="subtle xs">· {zh.method === "dubbing" ? "ElevenLabs Dubbing" : zh.method === "tts_translated_cursor" ? "Grok (in Cursor) translation + ElevenLabs voice" : "Grok translation + ElevenLabs voice"}</span>
             )}
           </div>
         </div>

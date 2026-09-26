@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+import { z } from "zod";
 import { config } from "../config.ts";
 import { all, get, run, type Db } from "../db.ts";
 import { wordCount } from "../lib/text.ts";
 import { formatDateOnly, formatNycDateTime, HttpError, newId, nowIso } from "../lib/util.ts";
+import { parseJsonReply } from "./extraction.ts";
 import { translateScriptToChinese } from "./grok.ts";
 import { getAudioRows, getEvents, getProposal, nextEvent, type AudioRow, type ProposalRow } from "./proposals.ts";
 
@@ -201,6 +203,48 @@ export async function generateChineseFallback(db: Db, proposalId: string): Promi
   run(db, "UPDATE audio SET status='pending', method='tts_translated', error=NULL, provider_job_json=NULL, updated_at=? WHERE id=?", nowIso(), zh.id);
   try {
     const script = await translateScriptToChinese(en.script);
+    const fp = saveFile(zh.id, ".mp3", await tts(script, "zh"));
+    run(db, "UPDATE audio SET status='ready', script=?, file_path=?, mime_type='audio/mpeg', translation_review='unreviewed', updated_at=? WHERE id=?", script, fp, nowIso(), zh.id);
+  } catch (e) {
+    run(db, "UPDATE audio SET status='failed', error=?, updated_at=? WHERE id=?", (e as Error).message, nowIso(), zh.id);
+    throw e;
+  }
+}
+
+const CURSOR_TRANSLATION_SCHEMA = z.object({ title_zh: z.string().min(1), summary_zh: z.string().min(1), script_zh: z.string().min(1) });
+
+/** Manual Grok route (no xAI API credit): one prompt for Grok in Cursor that returns the card text and spoken script in Chinese. */
+export function chineseCursorPrompt(db: Db, proposalId: string): string {
+  const p = getProposal(db, proposalId);
+  if (!p) throw new HttpError(404, "Proposal not found");
+  const en = audioRow(db, p, "en");
+  if (!en?.script_approved || !en.script) throw new HttpError(400, "Approve the English script first.");
+  return `Translate this civic information from English to Simplified Chinese for residents of Queens, New York.
+Keep every name, street address, number, date and time exactly equivalent (addresses may stay in English). Do not add or drop information.
+- title_zh and summary_zh: written text for the proposal card.
+- script_zh: natural spoken Chinese for a short audio briefing.
+
+Reply with ONLY this JSON object. No prose, no code fences, no tools, no file edits:
+{"title_zh": "...", "summary_zh": "...", "script_zh": "..."}
+
+${JSON.stringify({ title: p.title, summary: p.summary, script: en.script }, null, 2)}`;
+}
+
+/** Store Grok's pasted Chinese card text, then narrate its script with ElevenLabs. Labelled as an unreviewed translation. */
+export async function generateChineseFromPasted(db: Db, proposalId: string, raw: string): Promise<void> {
+  const p = getProposal(db, proposalId);
+  if (!p) throw new HttpError(404, "Proposal not found");
+  const en = audioRow(db, p, "en");
+  if (!en?.script_approved || !en.script) throw new HttpError(400, "Approve the English script first.");
+  const parsed = CURSOR_TRANSLATION_SCHEMA.safeParse(parseJsonReply(raw));
+  if (!parsed.success) throw new HttpError(400, "Paste Grok's JSON with title_zh, summary_zh and script_zh.");
+  const t = parsed.data;
+  const zh = ensureRow(db, p, "zh");
+  if (zh.status === "pending") throw new HttpError(409, "A Chinese job is already running.");
+  run(db, "UPDATE proposals SET title_zh=?, summary_zh=? WHERE id=? AND version=?", t.title_zh.trim(), t.summary_zh.trim(), p.id, p.version);
+  run(db, "UPDATE audio SET status='pending', method='tts_translated_cursor', error=NULL, provider_job_json=NULL, updated_at=? WHERE id=?", nowIso(), zh.id);
+  try {
+    const script = t.script_zh.trim();
     const fp = saveFile(zh.id, ".mp3", await tts(script, "zh"));
     run(db, "UPDATE audio SET status='ready', script=?, file_path=?, mime_type='audio/mpeg', translation_review='unreviewed', updated_at=? WHERE id=?", script, fp, nowIso(), zh.id);
   } catch (e) {

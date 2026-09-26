@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS drafts (
   document_id  TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
   item_index   INTEGER NOT NULL DEFAULT 0,
   status       TEXT NOT NULL,           -- extracting | needs_review | failed | published | discarded
-  extractor    TEXT NOT NULL,           -- grok | manual | seed
+  extractor    TEXT NOT NULL,           -- grok | grok_cursor | manual | seed
   model        TEXT,
   data_json    TEXT NOT NULL,           -- DraftData
   issues_json  TEXT NOT NULL DEFAULT '[]',
@@ -136,7 +136,8 @@ CREATE TABLE IF NOT EXISTS subscribers (
   opted_in_at        TEXT NOT NULL,
   active             INTEGER NOT NULL DEFAULT 1,
   stopped_at         TEXT,
-  created_at         TEXT NOT NULL
+  created_at         TEXT NOT NULL,
+  user_id            TEXT                   -- Better Auth user who linked this phone by following while signed in
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -155,7 +156,25 @@ CREATE TABLE IF NOT EXISTS follow_codes (
   created_at    TEXT NOT NULL,
   expires_at    TEXT NOT NULL,
   used_at       TEXT,
-  subscription_id TEXT
+  subscription_id TEXT,
+  user_id       TEXT                        -- signed-in resident who requested the code, if any
+);
+
+CREATE TABLE IF NOT EXISTS saved_proposals (
+  user_id     TEXT NOT NULL,                -- Better Auth user id
+  proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+  created_at  TEXT NOT NULL,
+  PRIMARY KEY (user_id, proposal_id)
+);
+
+-- Live ZAP projects are not rows in proposals, so saves for them live here.
+-- snapshot_json keeps the card if the city list is briefly unavailable.
+CREATE TABLE IF NOT EXISTS saved_applications (
+  user_id       TEXT NOT NULL,
+  project_id    TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  created_at    TEXT NOT NULL,
+  PRIMARY KEY (user_id, project_id)
 );
 
 CREATE TABLE IF NOT EXISTS notifications (

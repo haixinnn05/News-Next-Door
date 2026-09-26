@@ -23,8 +23,24 @@ export interface ZapApplication {
   location: { label: string; lat: number; lng: number; lot_count: number } | null;
 }
 
+export interface Board {
+  id: string;
+  name: string;
+  shortName: string;
+  borough: string;
+  number: number;
+  zapCode: string;
+  boroCd: number;
+  neighborhoods: string[];
+}
+
+export interface DistrictGeometry {
+  type: "Polygon" | "MultiPolygon";
+  coordinates: number[][][] | number[][][][];
+}
+
 export interface ZapFeed {
-  source: { name: string; dataset_url: string; board: string; fetched_at: string };
+  source: { name: string; dataset_url: string; board_id: string; board: string; fetched_at: string };
   applications: ZapApplication[];
 }
 
@@ -128,6 +144,15 @@ export interface Meta {
   integrations: { grok: boolean; elevenlabs: boolean; photon: boolean };
   show_sample_data: boolean;
   reminder_lead_hours: number;
+  team_sign_in: "google" | "token";
+  account_sign_in: { email: boolean; google: boolean };
+}
+
+export interface MyProposals {
+  saved: ProposalCard[];
+  following: (ProposalCard & { phone: string })[];
+  phones: string[];
+  applications: ZapApplication[];
 }
 
 export interface FollowResponse {

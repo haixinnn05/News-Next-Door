@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { adminRequest, adminToken, ApiError } from "../lib/api";
+import { signInWithGoogle } from "../lib/auth";
 import { BrandMark, Icon } from "../components/Icon";
 import { Link } from "../lib/router";
+import type { TeamSignIn } from "./types";
 
-export function Login({ onSignedIn }: { onSignedIn: () => void }) {
+export function Login({ mode, initialError, onSignedIn }: { mode: TeamSignIn; initialError: string | null; onSignedIn: () => void }) {
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -25,9 +27,26 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
     }
   };
 
+  const google = async () => {
+    setBusy(true);
+    setError(null);
+    const { error: err } = await signInWithGoogle();
+    if (err) {
+      setError(err.message ?? "Couldn't start Google sign-in.");
+      setBusy(false);
+    }
+  };
+
+  const errorBanner = error && (
+    <div className="banner red">
+      <Icon name="alert" size={16} />
+      <div>{error}</div>
+    </div>
+  );
+
   return (
     <div className="adm-login">
-      <form className="adm-login-card" onSubmit={submit}>
+      <div className="adm-login-card">
         <div className="adm-login-brand">
           <BrandMark size={34} />
           <div>
@@ -36,30 +55,43 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
           </div>
         </div>
         <h1>Team sign-in</h1>
-        <p className="muted small">This area is for the News Next Door team. Enter the admin token to continue.</p>
-        <div className="field">
-          <label htmlFor="adm-token">Admin token</label>
-          <input id="adm-token" className="input" type="password" autoFocus autoComplete="current-password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="••••••••••••" />
-        </div>
-        {error && (
-          <div className="banner red">
-            <Icon name="alert" size={16} />
-            <div>{error}</div>
-          </div>
+        {mode === "google" ? (
+          <>
+            <p className="muted small">This area is for the News Next Door team. Sign in with the Google account on the team list.</p>
+            {errorBanner}
+            <button type="button" className="btn primary block" disabled={busy} onClick={() => void google()}>
+              {busy ? "Opening Google…" : "Sign in with Google"}
+            </button>
+            <p className="subtle xs adm-login-note">
+              <Icon name="shield" size={13} />
+              <span>
+                Only emails listed in <code>ADMIN_EMAILS</code> can sign in.
+              </span>
+            </p>
+          </>
+        ) : (
+          <form onSubmit={submit}>
+            <p className="muted small">This area is for the News Next Door team. Enter the admin token to continue.</p>
+            <div className="field">
+              <label htmlFor="adm-token">Admin token</label>
+              <input id="adm-token" className="input" type="password" autoFocus autoComplete="current-password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="••••••••••••" />
+            </div>
+            {errorBanner}
+            <button className="btn primary block" disabled={busy || !token.trim()}>
+              {busy ? "Signing in…" : "Sign in"}
+            </button>
+            <p className="subtle xs adm-login-note">
+              <Icon name="shield" size={13} />
+              <span>
+                Set <code>ADMIN_TOKEN</code> in <code>.env</code>. The local development default is <code>before-the-vote-team</code>.
+              </span>
+            </p>
+          </form>
         )}
-        <button className="btn primary block" disabled={busy || !token.trim()}>
-          {busy ? "Signing in…" : "Sign in"}
-        </button>
-        <p className="subtle xs adm-login-note">
-          <Icon name="shield" size={13} />
-          <span>
-            Set <code>ADMIN_TOKEN</code> in <code>.env</code>. The local development default is <code>before-the-vote-team</code>.
-          </span>
-        </p>
         <Link to="/" className="link small">
           ← Back to the public site
         </Link>
-      </form>
+      </div>
     </div>
   );
 }

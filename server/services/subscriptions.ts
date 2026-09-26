@@ -14,11 +14,12 @@ export interface FollowCodeRow {
   expires_at: string;
   used_at: string | null;
   subscription_id: string | null;
+  user_id: string | null;
 }
 
 const CODE_RE = /\bQCB2[\s-]?(\d{4})\b/i;
 
-export function createFollowCode(db: Db, proposalId: string, language: "en" | "zh"): FollowCodeRow {
+export function createFollowCode(db: Db, proposalId: string, language: "en" | "zh", userId: string | null = null): FollowCodeRow {
   const p = getProposal(db, proposalId);
   if (!p || !p.published) throw new HttpError(404, "Proposal not found");
   const now = Date.now();
@@ -29,8 +30,8 @@ export function createFollowCode(db: Db, proposalId: string, language: "en" | "z
     if (clash) run(db, "DELETE FROM follow_codes WHERE code = ?", code);
     run(
       db,
-      "INSERT INTO follow_codes (code, proposal_id, language, created_at, expires_at) VALUES (?,?,?,?,?)",
-      code, proposalId, language, new Date(now).toISOString(), new Date(now + config.followCodeTtlMinutes * 60_000).toISOString(),
+      "INSERT INTO follow_codes (code, proposal_id, language, created_at, expires_at, user_id) VALUES (?,?,?,?,?,?)",
+      code, proposalId, language, new Date(now).toISOString(), new Date(now + config.followCodeTtlMinutes * 60_000).toISOString(), userId,
     );
     return get<FollowCodeRow>(db, "SELECT * FROM follow_codes WHERE code = ?", code)!;
   }
@@ -114,6 +115,8 @@ export function handleInbound(db: Db, ev: Inbound): { action: string } {
     return tx(db, () => {
       const sb = upsertSubscriber(db, ev, fc.language);
       if (!sb.active) run(db, "UPDATE subscribers SET active=1, stopped_at=NULL, opted_in_at=? WHERE id=?", nowIso(), sb.id);
+      // the first phone to text a code requested while signed in is linked to that account
+      if (fc.user_id && !fc.used_at) run(db, "UPDATE subscribers SET user_id=? WHERE id=?", fc.user_id, sb.id);
       let sub = get<SubscriptionRow>(db, "SELECT * FROM subscriptions WHERE subscriber_id=? AND proposal_id=?", sb.id, fc.proposal_id);
       if (!sub) {
         const id = newId("sbs");

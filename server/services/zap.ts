@@ -8,6 +8,7 @@
  * These records are the city's own fields (name, brief, status, applicant).
  * They are not page-cited briefings, so they stay out of the publish pipeline.
  */
+import type { Board } from "../lib/boards.ts";
 import { HttpError } from "../lib/util.ts";
 
 const DATASET = "https://data.cityofnewyork.us/resource/hgx4-8ukb.json";
@@ -31,6 +32,9 @@ const ACTION_LABELS: Record<string, string> = {
   PQ: "Acquisition",
   MM: "City map change",
   HA: "Urban development action",
+  LD: "Landmark",
+  HI: "Landmark designation",
+  CS: "Substantial compliance",
 };
 
 export interface ZapRow {
@@ -80,6 +84,7 @@ export interface ZapFeed {
   source: {
     name: string;
     dataset_url: string;
+    board_id: string;
     board: string;
     fetched_at: string;
   };
@@ -91,60 +96,79 @@ function day(value: string | undefined): string | null {
   return match ? match[1] : null;
 }
 
-function districtLabel(code: string): string {
+const BOROUGH_NAME: Record<string, string> = { Q: "Queens", K: "Brooklyn", M: "Manhattan", X: "Bronx", R: "Staten Island" };
+
+export function districtLabel(code: string): string {
   return code
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean)
     .map((part) => {
-      const match = /^Q(\d+)$/.exec(part);
-      return match ? `Queens CB ${Number(match[1])}` : part;
+      const match = /^([QKMXR])(\d+)$/.exec(part);
+      return match ? `${BOROUGH_NAME[match[1]]} CB ${Number(match[2])}` : part;
     })
     .join(", ");
 }
 
-function includesCb2(code: string | undefined): boolean {
+/** True when a ZAP community_district cell includes this exact code (Q01 does not match Q10). */
+export function includesDistrict(code: string | undefined, zapCode: string): boolean {
   return (code ?? "")
     .split(",")
     .map((part) => part.trim())
-    .includes("Q02");
+    .includes(zapCode);
 }
 
-export function normalizeZapRows(rows: ZapRow[]): ZapApplication[] {
+/** SoQL predicate. zapCode must be a catalog code like Q02, never raw user text. */
+export function communityDistrictClause(zapCode: string): string {
+  if (!/^[QKMXR]\d{2}$/.test(zapCode)) throw new Error(`Invalid community district code: ${zapCode}`);
+  return `(community_district = '${zapCode}' OR community_district like '${zapCode},%' OR community_district like '%,${zapCode}' OR community_district like '%, ${zapCode}' OR community_district like '%,${zapCode},%' OR community_district like '%, ${zapCode},%')`;
+}
+
+/** City project ids, such as 2023M0213. Used to keep a lookup from becoming a query. */
+export const PROJECT_ID = /^[A-Za-z0-9]{4,32}$/;
+
+/** One public, active ZAP project. District membership is checked separately. */
+export function toApplication(row: ZapRow): ZapApplication | null {
+  const id = row.project_id?.trim();
+  const name = row.project_name?.trim();
+  if (!id || !name) return null;
+  if (row.project_status && row.project_status !== "Active") return null;
+  if (row.dcp_visibility && row.dcp_visibility !== "General Public") return null;
+  if (!PUBLIC_STATUSES.includes(row.public_status as ZapPublicStatus)) return null;
+  const actions = (row.actions ?? "")
+    .split(/[;,]/)
+    .map((code) => code.trim())
+    .filter(Boolean)
+    .map((code) => ({ code, label: ACTION_LABELS[code] ?? code }));
+  return {
+    id,
+    name,
+    brief: row.project_brief?.trim() || null,
+    public_status: row.public_status as ZapPublicStatus,
+    applicant: row.primary_applicant?.trim() || null,
+    applicant_type: row.applicant_type?.trim() || null,
+    ulurp_numbers: row.ulurp_numbers?.trim() || null,
+    ceqr_number: row.ceqr_number?.trim() || null,
+    districts: districtLabel(row.community_district ?? ""),
+    council_district: row.cc_district == null || row.cc_district === "" ? null : String(row.cc_district),
+    actions,
+    milestone: row.current_milestone?.trim() || null,
+    milestone_date: day(row.current_milestone_date),
+    filed_date: day(row.app_filed_date),
+    noticed_date: day(row.noticed_date),
+    certified_date: day(row.certified_referred),
+    zap_url: `https://zap.planning.nyc.gov/projects/${encodeURIComponent(id)}`,
+    location: null,
+  };
+}
+
+export function normalizeZapRows(rows: ZapRow[], zapCode: string): ZapApplication[] {
   const applications: ZapApplication[] = [];
   for (const row of rows) {
-    const id = row.project_id?.trim();
-    const name = row.project_name?.trim();
-    if (!id || !name) continue;
-    if (row.project_status && row.project_status !== "Active") continue;
-    if (row.dcp_visibility && row.dcp_visibility !== "General Public") continue;
-    if (!PUBLIC_STATUSES.includes(row.public_status as ZapPublicStatus)) continue;
-    if (!includesCb2(row.community_district)) continue;
-    const actions = (row.actions ?? "")
-      .split(/[;,]/)
-      .map((code) => code.trim())
-      .filter(Boolean)
-      .map((code) => ({ code, label: ACTION_LABELS[code] ?? code }));
-    applications.push({
-      id,
-      name,
-      brief: row.project_brief?.trim() || null,
-      public_status: row.public_status as ZapPublicStatus,
-      applicant: row.primary_applicant?.trim() || null,
-      applicant_type: row.applicant_type?.trim() || null,
-      ulurp_numbers: row.ulurp_numbers?.trim() || null,
-      ceqr_number: row.ceqr_number?.trim() || null,
-      districts: districtLabel(row.community_district ?? "Q02"),
-      council_district: row.cc_district == null || row.cc_district === "" ? null : String(row.cc_district),
-      actions,
-      milestone: row.current_milestone?.trim() || null,
-      milestone_date: day(row.current_milestone_date),
-      filed_date: day(row.app_filed_date),
-      noticed_date: day(row.noticed_date),
-      certified_date: day(row.certified_referred),
-      zap_url: `https://zap.planning.nyc.gov/projects/${encodeURIComponent(id)}`,
-      location: null,
-    });
+    if (!includesDistrict(row.community_district, zapCode)) continue;
+    const app = toApplication(row);
+    if (!app) continue;
+    applications.push({ ...app, districts: districtLabel(row.community_district ?? zapCode) });
   }
   applications.sort((a, b) => {
     const rank = (STATUS_RANK[a.public_status] ?? 9) - (STATUS_RANK[b.public_status] ?? 9);
@@ -250,37 +274,16 @@ async function attachLocations(apps: ZapApplication[]): Promise<ZapApplication[]
   return locateApplications(apps, bbls, lots);
 }
 
-let cache: { at: number; body: ZapFeed } | null = null;
+const cache = new Map<string, { at: number; body: ZapFeed }>();
 
-export async function queensCb2Applications(now = Date.now()): Promise<ZapFeed> {
-  if (cache && now - cache.at < TTL_MS) return cache.body;
+export async function districtApplications(board: Board, now = Date.now()): Promise<ZapFeed> {
+  const hit = cache.get(board.id);
+  if (hit && now - hit.at < TTL_MS) return hit.body;
   const url = new URL(DATASET);
-  url.searchParams.set(
-    "$select",
-    [
-      "project_id",
-      "project_name",
-      "project_brief",
-      "project_status",
-      "public_status",
-      "ulurp_numbers",
-      "ceqr_number",
-      "primary_applicant",
-      "applicant_type",
-      "community_district",
-      "cc_district",
-      "current_milestone",
-      "current_milestone_date",
-      "app_filed_date",
-      "noticed_date",
-      "certified_referred",
-      "actions",
-      "dcp_visibility",
-    ].join(","),
-  );
+  url.searchParams.set("$select", ZAP_SELECT);
   url.searchParams.set(
     "$where",
-    "borough = 'Queens' AND community_district like '%Q02%' AND public_status in ('Filed', 'In Public Review', 'Noticed') AND project_status = 'Active' AND (dcp_visibility = 'General Public' OR dcp_visibility IS NULL)",
+    `${communityDistrictClause(board.zapCode)} AND public_status in ('Filed', 'In Public Review', 'Noticed') AND project_status = 'Active' AND (dcp_visibility = 'General Public' OR dcp_visibility IS NULL)`,
   );
   url.searchParams.set("$limit", "100");
 
@@ -298,7 +301,7 @@ export async function queensCb2Applications(now = Date.now()): Promise<ZapFeed> 
     throw new HttpError(502, "NYC Planning's application list is temporarily unavailable.");
   }
 
-  let applications = normalizeZapRows(rows as ZapRow[]);
+  let applications = normalizeZapRows(rows as ZapRow[], board.zapCode);
   let located = true;
   try {
     applications = await attachLocations(applications);
@@ -310,11 +313,77 @@ export async function queensCb2Applications(now = Date.now()): Promise<ZapFeed> 
     source: {
       name: "NYC Open Data — Zoning Application Portal (ZAP) Project Data",
       dataset_url: DATASET_PAGE,
-      board: "Queens Community District 2",
+      board_id: board.id,
+      board: board.name,
       fetched_at: new Date(now).toISOString(),
     },
     applications,
   };
-  if (located) cache = { at: now, body };
+  if (located) cache.set(board.id, { at: now, body });
   return body;
+}
+
+const ZAP_SELECT = [
+  "project_id",
+  "project_name",
+  "project_brief",
+  "project_status",
+  "public_status",
+  "ulurp_numbers",
+  "ceqr_number",
+  "primary_applicant",
+  "applicant_type",
+  "community_district",
+  "cc_district",
+  "current_milestone",
+  "current_milestone_date",
+  "app_filed_date",
+  "noticed_date",
+  "certified_referred",
+  "actions",
+  "dcp_visibility",
+].join(",");
+
+const oneCache = new Map<string, { at: number; app: ZapApplication }>();
+
+/** One live project by its city id, including tax-lot location when the city lists lots. */
+export async function applicationById(id: string, now = Date.now()): Promise<ZapApplication> {
+  if (!PROJECT_ID.test(id)) throw new HttpError(404, "Application not found");
+  for (const hit of cache.values()) {
+    if (now - hit.at >= TTL_MS) continue;
+    const found = hit.body.applications.find((app) => app.id === id);
+    if (found) return found;
+  }
+  const cached = oneCache.get(id);
+  if (cached && now - cached.at < TTL_MS) return cached.app;
+
+  const url = new URL(DATASET);
+  url.searchParams.set("$select", ZAP_SELECT);
+  url.searchParams.set(
+    "$where",
+    `project_id = '${id}' AND public_status in ('Filed', 'In Public Review', 'Noticed') AND project_status = 'Active' AND (dcp_visibility = 'General Public' OR dcp_visibility IS NULL)`,
+  );
+  url.searchParams.set("$limit", "1");
+
+  let rows: unknown;
+  try {
+    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12_000) });
+    if (!res.ok) throw new Error(`NYC Open Data returned ${res.status}`);
+    rows = await res.json();
+  } catch (err) {
+    console.error("[zap]", err);
+    throw new HttpError(502, "NYC Planning's application list is temporarily unavailable.");
+  }
+  if (!Array.isArray(rows)) throw new HttpError(502, "NYC Planning's application list is temporarily unavailable.");
+  const app = rows.length ? toApplication(rows[0] as ZapRow) : null;
+  if (!app) throw new HttpError(404, "Application not found");
+
+  let located = app;
+  try {
+    [located] = await attachLocations([app]);
+  } catch (err) {
+    console.error("[zap] locations", err);
+  }
+  oneCache.set(id, { at: now, app: located });
+  return located;
 }

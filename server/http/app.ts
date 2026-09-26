@@ -2,18 +2,22 @@ import fs from "node:fs";
 import path from "node:path";
 import { Hono, type Context } from "hono";
 import QRCode from "qrcode";
+import { isTeamEmail, type Auth } from "../auth.ts";
 import { config } from "../config.ts";
 import { all, get, run, type Db } from "../db.ts";
 import { BOARD } from "../lib/addresses.ts";
 import { HttpError, newId, nowIso, nycToUtcIso } from "../lib/util.ts";
+import { myProposals, setSaved } from "../services/account.ts";
 import * as audio from "../services/audio.ts";
 import { fetchRemote, getDocument, getPages, importDocument, type DocumentRow } from "../services/documents.ts";
-import { extractDocument, getDraft, listDrafts, saveDraft, CATEGORIES, EVENT_TYPES, STAGE_KINDS, type DraftRow } from "../services/extraction.ts";
+import { extractDocument, extractionPrompt, importPastedExtraction, getDraft, listDrafts, saveDraft, CATEGORIES, EVENT_TYPES, STAGE_KINDS, type DraftRow } from "../services/extraction.ts";
 import { translateCardToChinese } from "../services/grok.ts";
 import { queueTestMessage, reconcileReminders, runDueNotifications, type NotificationRow, type SubscriberRow } from "../services/notifications.ts";
 import { coverage, getProposal, listPublished, proposalCard, proposalDetail, publishDraft, search, type ProposalRow } from "../services/proposals.ts";
 import { createFollowCode, followStatus, handleInbound } from "../services/subscriptions.ts";
-import { queensCb2Applications } from "../services/zap.ts";
+import { BOARDS, boardById, DEFAULT_BOARD_ID } from "../lib/boards.ts";
+import { communityDistrictBoundary } from "../services/boundary.ts";
+import { applicationById, districtApplications } from "../services/zap.ts";
 
 const MIME: Record<string, string> = { ".mp3": "audio/mpeg", ".flac": "audio/flac", ".pdf": "application/pdf", ".html": "text/html; charset=utf-8" };
 
@@ -34,14 +38,26 @@ function sendFile(c: Context, filePath: string, type?: string) {
 
 const maskHandle = (h: string) => (h.includes("@") ? h.replace(/^(.{2}).*(@.*)$/, "$1•••$2") : h.replace(/^(\+?\d{0,2})\d*(\d{4})$/, "$1 ••• $2"));
 
-export function createApp(db: Db, opts: { photonEnabled: boolean }) {
+type TeamMember = { email: string; name: string; image: string | null };
+
+export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) {
   const app = new Hono();
+  const { auth } = opts;
+  const teamSignIn = config.auth.googleEnabled ? "google" : "token";
+  const sessionOf = (c: Context) => auth.api.getSession({ headers: c.req.raw.headers });
+  const requireUser = async (c: Context) => {
+    const session = await sessionOf(c);
+    if (!session) throw new HttpError(401, "Sign in first.");
+    return session.user;
+  };
 
   app.onError((err, c) => {
     const status = err instanceof HttpError ? err.status : 500;
     if (status >= 500) console.error("[http]", err);
     return c.json({ error: err.message || "Server error" }, status as 400);
   });
+
+  app.all("/api/auth/*", (c) => auth.handler(c.req.raw));
 
   // ------------------------------------------------------------ public
   app.get("/api/meta", (c) =>
@@ -55,15 +71,47 @@ export function createApp(db: Db, opts: { photonEnabled: boolean }) {
       integrations: { grok: config.grok.enabled, elevenlabs: config.elevenlabs.enabled, photon: opts.photonEnabled },
       show_sample_data: config.showSampleData,
       reminder_lead_hours: config.reminderLeadHours,
+      team_sign_in: teamSignIn,
+      account_sign_in: { email: true, google: config.auth.googleEnabled },
     }),
   );
+
+  // ------------------------------------------------------------ signed-in residents
+  app.get("/api/me/proposals", async (c) => {
+    const user = await requireUser(c);
+    return c.json(await myProposals(db, user.id, maskHandle));
+  });
+  app.put("/api/me/saved/:id", async (c) => {
+    const user = await requireUser(c);
+    await setSaved(db, user.id, c.req.param("id"), true);
+    return c.json({ ok: true });
+  });
+  app.delete("/api/me/saved/:id", async (c) => {
+    const user = await requireUser(c);
+    await setSaved(db, user.id, c.req.param("id"), false);
+    return c.json({ ok: true });
+  });
 
   app.get("/api/proposals", (c) => {
     const r = search(db, c.req.query("q") ?? "", c.req.query("category") ?? "all");
     return c.json(r);
   });
 
-  app.get("/api/applications", async (c) => c.json(await queensCb2Applications()));
+  app.get("/api/boards", (c) => c.json({ default_id: DEFAULT_BOARD_ID, boards: BOARDS }));
+
+  app.get("/api/boards/:id/boundary", async (c) => {
+    const board = boardById(c.req.param("id"));
+    if (!board) throw new HttpError(404, "Unknown community board");
+    return c.json({ board_id: board.id, geometry: await communityDistrictBoundary(board.boroCd) });
+  });
+
+  app.get("/api/applications", async (c) => {
+    const board = boardById(c.req.query("board") || DEFAULT_BOARD_ID);
+    if (!board) throw new HttpError(404, "Unknown community board");
+    return c.json(await districtApplications(board));
+  });
+
+  app.get("/api/applications/:id", async (c) => c.json(await applicationById(c.req.param("id"))));
 
   app.get("/api/proposals/:id", (c) => {
     const p = getProposal(db, c.req.param("id"));
@@ -73,7 +121,8 @@ export function createApp(db: Db, opts: { photonEnabled: boolean }) {
 
   app.post("/api/proposals/:id/follow", async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { language?: string };
-    const fc = createFollowCode(db, c.req.param("id"), body.language === "zh" ? "zh" : "en");
+    const session = await sessionOf(c);
+    const fc = createFollowCode(db, c.req.param("id"), body.language === "zh" ? "zh" : "en", session?.user.id ?? null);
     const line = config.photon.lineAddress;
     const link = opts.photonEnabled && line ? `sms:${line}&body=${encodeURIComponent(fc.code)}` : `/phone?code=${encodeURIComponent(fc.code)}`;
     const qrTarget = link.startsWith("/") ? `${config.publicBaseUrl}${link}` : link;
@@ -113,12 +162,26 @@ export function createApp(db: Db, opts: { photonEnabled: boolean }) {
   });
 
   // ------------------------------------------------------------ admin (team only)
-  const admin = new Hono();
+  const admin = new Hono<{ Variables: { member: TeamMember | null } }>();
   admin.use("*", async (c, next) => {
-    const token = c.req.header("authorization")?.replace(/^Bearer\s+/i, "");
-    if (token !== config.adminToken) return c.json({ error: "Unauthorized" }, 401);
+    if (teamSignIn === "google") {
+      const session = await sessionOf(c);
+      if (!session) return c.json({ error: "Unauthorized" }, 401);
+      const { email, name, image, emailVerified } = session.user;
+      if (!isTeamEmail(email, emailVerified)) {
+        const listed = config.auth.adminEmails.includes(email.toLowerCase());
+        return c.json({ error: listed ? "Team members must sign in with Google. Sign out, then use Sign in with Google." : `${email} isn't on the team list. Ask a teammate to add it to ADMIN_EMAILS.` }, 403);
+      }
+      c.set("member", { email, name, image: image ?? null });
+    } else {
+      const token = c.req.header("authorization")?.replace(/^Bearer\s+/i, "");
+      if (token !== config.adminToken) return c.json({ error: "Unauthorized" }, 401);
+      c.set("member", null);
+    }
     await next();
   });
+
+  admin.get("/me", (c) => c.json({ sign_in: teamSignIn, member: c.get("member") }));
 
   admin.get("/overview", (c) => {
     const n = (sql: string) => get<{ n: number }>(db, sql)!.n;
@@ -136,6 +199,7 @@ export function createApp(db: Db, opts: { photonEnabled: boolean }) {
       },
       public_base_url: config.publicBaseUrl,
       show_sample_data: config.showSampleData,
+      team_sign_in: { mode: teamSignIn, allowed_emails: teamSignIn === "google" ? config.auth.adminEmails.length : null },
     });
   });
 
@@ -184,6 +248,12 @@ export function createApp(db: Db, opts: { photonEnabled: boolean }) {
     const id = c.req.param("id");
     run(db, "DELETE FROM drafts WHERE document_id=? AND status='failed'", id);
     return c.json(await extractDocument(db, id));
+  });
+  // Manual Grok route: copy this prompt into Grok in Cursor, then paste the reply back.
+  admin.get("/documents/:id/grok-prompt", (c) => c.json({ prompt: extractionPrompt(db, c.req.param("id")) }));
+  admin.post("/documents/:id/grok-paste", async (c) => {
+    const { json, model } = (await c.req.json()) as { json: string; model?: string };
+    return c.json(importPastedExtraction(db, c.req.param("id"), String(json ?? ""), model ?? null));
   });
 
   const draftView = (d: DraftRow) => {
@@ -290,6 +360,12 @@ export function createApp(db: Db, opts: { photonEnabled: boolean }) {
     const { method } = (await c.req.json().catch(() => ({}))) as { method?: string };
     if (method === "tts_translated") await audio.generateChineseFallback(db, c.req.param("id"));
     else await audio.startChineseDub(db, c.req.param("id"));
+    return c.json({ ok: true });
+  });
+  admin.get("/audio/:id/zh-grok-prompt", (c) => c.json({ prompt: audio.chineseCursorPrompt(db, c.req.param("id")) }));
+  admin.post("/audio/:id/zh-grok-paste", async (c) => {
+    const { json } = (await c.req.json()) as { json: string };
+    await audio.generateChineseFromPasted(db, c.req.param("id"), String(json ?? ""));
     return c.json({ ok: true });
   });
   admin.post("/audio/:id/zh-reset", (c) => {

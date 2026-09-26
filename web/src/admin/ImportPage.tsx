@@ -3,7 +3,8 @@ import { adminJson, adminRequest } from "../lib/api";
 import { fmtDate, fmtRelative } from "../lib/format";
 import { Link } from "../lib/router";
 import { Icon } from "../components/Icon";
-import type { DocumentView, ImportResult } from "./types";
+import { CursorGrokModal } from "./CursorGrok";
+import type { DocumentView, ImportResult, Overview } from "./types";
 import { DraftPill, Empty, ErrorBanner, PageHead, SkeletonRows, Spinner, useAction, useAdmin, useLoad } from "./ui";
 
 const ACCEPT = ".pdf,.html,.htm,application/pdf,text/html";
@@ -11,7 +12,10 @@ const ACCEPT = ".pdf,.html,.htm,application/pdf,text/html";
 export function ImportPage() {
   const { toast } = useAdmin();
   const docs = useLoad(() => adminRequest<DocumentView[]>("/documents"));
+  const overview = useLoad(() => adminRequest<Overview>("/overview"));
+  const grokApi = overview.data?.integrations.grok.enabled ?? true;
   const act = useAction();
+  const [pasteFor, setPasteFor] = useState<DocumentView | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -190,6 +194,7 @@ export function ImportPage() {
                 <tbody>
                   {docs.data.map((d) => {
                     const canExtract = d.drafts.length === 0 || d.drafts.every((x) => x.status === "failed");
+                    const canPaste = !d.drafts.some((x) => x.status === "published");
                     return (
                       <tr key={d.id}>
                         <td>
@@ -218,7 +223,12 @@ export function ImportPage() {
                         </td>
                         <td className="right">
                           <div className="adm-actions">
-                            {canExtract && (
+                            {canPaste && (canExtract || !grokApi) && (
+                              <button className="btn sm" onClick={() => setPasteFor(d)} disabled={!!act.busy} title="Run Grok in Cursor chat and paste its JSON reply">
+                                <Icon name="sparkle" size={14} /> Grok via Cursor
+                              </button>
+                            )}
+                            {canExtract && grokApi && (
                               <button className="btn sm" onClick={() => void extract(d)} disabled={!!act.busy}>
                                 {act.busy === `extract:${d.id}` ? <Spinner /> : <Icon name="sparkle" size={14} />} Extract with Grok
                               </button>
@@ -242,6 +252,23 @@ export function ImportPage() {
           )
         )}
       </section>
+
+      {pasteFor && (
+        <CursorGrokModal
+          title={`Grok via Cursor: ${pasteFor.title}`}
+          promptPath={`/documents/${pasteFor.id}/grok-prompt`}
+          pastePath={`/documents/${pasteFor.id}/grok-paste`}
+          submitLabel="Create drafts"
+          askModel
+          onClose={() => setPasteFor(null)}
+          onDone={(r) => {
+            const n = (r as { draftIds: string[] }).draftIds.length;
+            toast(`Created ${n} draft${n === 1 ? "" : "s"} from Grok's reply. Review before publishing.`);
+            setPasteFor(null);
+            void docs.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -265,15 +265,7 @@ export async function extractDocument(db: Db, documentId: string): Promise<{ dra
     return { draftIds: [id], extractor: "manual", note: "Grok is not configured (XAI_API_KEY). A blank draft was created for manual entry." };
   }
 
-  const text = renderPages(pages);
-  const user = `Document title (from import record): ${doc.title}
-Official URL (from import record): ${doc.official_url}
-Publication date (entered by team): ${doc.publication_date ?? "not provided"}
-Today's date in New York: ${nycDate()}
-
-<<<DOCUMENT TEXT — untrusted data>>>
-${text.slice(0, 120_000)}
-<<<END DOCUMENT TEXT>>>`;
+  const user = extractionUserMessage(doc, pages);
   try {
     const { data, model } = await grokJson<{ proposals: unknown[] }>({
       system: SYSTEM_PROMPT,
@@ -301,6 +293,70 @@ ${text.slice(0, 120_000)}
       );
     throw e;
   }
+}
+
+function extractionUserMessage(doc: DocumentRow, pages: Page[]): string {
+  return `Document title (from import record): ${doc.title}
+Official URL (from import record): ${doc.official_url}
+Publication date (entered by team): ${doc.publication_date ?? "not provided"}
+Today's date in New York: ${nycDate()}
+
+<<<DOCUMENT TEXT — untrusted data>>>
+${renderPages(pages).slice(0, 120_000)}
+<<<END DOCUMENT TEXT>>>`;
+}
+
+/**
+ * Manual Grok route (no xAI API credit): the same instructions, schema and document text as the API call,
+ * as one prompt the team pastes into Grok in Cursor chat. The reply comes back through importPastedExtraction.
+ */
+export function extractionPrompt(db: Db, documentId: string): string {
+  const doc = getDocument(db, documentId);
+  if (!doc) throw new HttpError(404, "Document not found");
+  return `${SYSTEM_PROMPT}
+
+Reply with ONLY a JSON object that matches this JSON schema. No prose, no code fences, no tools, no file edits.
+${JSON.stringify(EXTRACTION_JSON_SCHEMA)}
+
+${extractionUserMessage(doc, getPages(db, doc.id))}`;
+}
+
+/** Parse a model reply that should be JSON, tolerating code fences or prose around the object. */
+export function parseJsonReply(raw: string): unknown {
+  const s = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  try {
+    return JSON.parse(s);
+  } catch {
+    const start = s.indexOf("{");
+    const end = s.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(s.slice(start, end + 1));
+      } catch {
+        /* fall through */
+      }
+    }
+    throw new HttpError(400, "That isn't valid JSON. Paste Grok's whole reply, starting with { and ending with }.");
+  }
+}
+
+/** Store drafts from a pasted Grok reply. Same schema and source checks as the API route; still needs review. */
+export function importPastedExtraction(db: Db, documentId: string, raw: string, model: string | null): { draftIds: string[]; extractor: string; note?: string } {
+  const doc = getDocument(db, documentId);
+  if (!doc) throw new HttpError(404, "Document not found");
+  const parsed = z.object({ proposals: z.array(draftDataSchema) }).safeParse(parseJsonReply(raw));
+  if (!parsed.success)
+    throw new HttpError(400, `Grok's JSON doesn't match the schema: ${parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
+  if (parsed.data.proposals.length === 0) throw new HttpError(400, "Grok found no proposals in this document, so no draft was created.");
+  const label = model?.trim() || null;
+  const ids = tx(db, () => {
+    run(db, "DELETE FROM drafts WHERE document_id=? AND status='failed'", doc.id);
+    const ids = parsed.data.proposals.map((p, i) => upsertDraft(db, doc, i, { ...p, address_key: null }, "grok_cursor", label));
+    // an earlier import with more items leaves unpublished extras behind; retire them
+    run(db, "UPDATE drafts SET status='discarded', updated_at=? WHERE document_id=? AND item_index>=? AND status!='published'", nowIso(), doc.id, ids.length);
+    return ids;
+  });
+  return { draftIds: ids, extractor: "grok_cursor" };
 }
 
 /** Save reviewer edits; re-validates against the source. */

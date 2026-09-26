@@ -147,8 +147,50 @@ const en = {
   footer: "News Next Door. News from Queens. Check the city website on each story.",
 } as const;
 
-export type Key = keyof typeof en;
-type Pack = { [K in Key]: string };
+type ExtraKey =
+  | "actionsRequested"
+  | "appLede"
+  | "ceqrNumber"
+  | "certifiedDate"
+  | "communityBoard"
+  | "continueGoogle"
+  | "councilDistrict"
+  | "createAccount"
+  | "createTitle"
+  | "email"
+  | "filedDate"
+  | "followLinked"
+  | "followingEmpty"
+  | "followingSection"
+  | "haveAccount"
+  | "linkedPhones"
+  | "myProposals"
+  | "myProposalsSub"
+  | "name"
+  | "noAccount"
+  | "noticedDate"
+  | "orEmail"
+  | "password"
+  | "passwordHint"
+  | "removedToast"
+  | "save"
+  | "saved"
+  | "savedEmpty"
+  | "savedSection"
+  | "savedToast"
+  | "signIn"
+  | "signInFailed"
+  | "signInTitle"
+  | "signInToSee"
+  | "signInWhy"
+  | "signOut"
+  | "stopHint"
+  | "team"
+  | "ulurpNumbers"
+  | "viewDetails";
+
+export type Key = keyof typeof en | ExtraKey;
+type Pack = { [K in keyof typeof en]: string };
 
 const zh: Pack = {
   discover: "探索",
@@ -997,7 +1039,351 @@ const ru: Pack = {
   footer: "News Next Door. Новости Куинса. Проверяйте сайт города в каждой новости.",
 };
 
+const extra: Record<Lang, Record<ExtraKey, string>> = {
+  en: {
+    actionsRequested: "Actions requested",
+    appLede: "This is the city's own record. The description, status, and dates are what the city published.",
+    ceqrNumber: "CEQR number",
+    certifiedDate: "Certified",
+    communityBoard: "Community board",
+    continueGoogle: "Continue with Google",
+    councilDistrict: "Council district",
+    createAccount: "Create account",
+    createTitle: "Create your account",
+    email: "Email",
+    filedDate: "Filed",
+    followLinked: "You're signed in, so this follow will show in My proposals.",
+    followingEmpty: "No text follows are linked to your account yet.",
+    followingSection: "Following by text",
+    haveAccount: "Already have an account?",
+    linkedPhones: "Linked phone",
+    myProposals: "My proposals",
+    myProposalsSub: "Proposals you saved, and proposals you follow by text.",
+    name: "Name",
+    noAccount: "New here?",
+    noticedDate: "Noticed",
+    orEmail: "or use email",
+    password: "Password",
+    passwordHint: "At least 8 characters",
+    removedToast: "Removed from My proposals",
+    save: "Save",
+    saved: "Saved",
+    savedEmpty: "You haven't saved any proposals yet.",
+    savedSection: "Saved",
+    savedToast: "Saved to My proposals",
+    signIn: "Sign in",
+    signInFailed: "Sign-in didn't go through. Please try again.",
+    signInTitle: "Sign in to News Next Door",
+    signInToSee: "Sign in to see what you saved and follow.",
+    signInWhy: "Save stories and see what you follow in one place. You can still read without an account.",
+    signOut: "Sign out",
+    stopHint: "To stop texts, reply STOP from your phone.",
+    team: "Team",
+    ulurpNumbers: "ULURP numbers",
+    viewDetails: "View details",
+  },
+  zh: {
+    actionsRequested: "申请事项",
+    appLede: "这是市政府公布的记录。以下说明、状态和日期都来自市政府。",
+    ceqrNumber: "CEQR 编号",
+    certifiedDate: "认证或转介",
+    communityBoard: "社区委员会",
+    continueGoogle: "使用 Google 继续",
+    councilDistrict: "市议会选区",
+    createAccount: "创建账户",
+    createTitle: "创建您的账户",
+    email: "电子邮件",
+    filedDate: "提交日期",
+    followLinked: "您已登录，此关注会显示在“我的提案”中。",
+    followingEmpty: "您的账户还没有关联短信关注。",
+    followingSection: "短信关注",
+    haveAccount: "已有账户？",
+    linkedPhones: "已关联手机",
+    myProposals: "我的提案",
+    myProposalsSub: "您保存的提案，以及您通过短信关注的提案。",
+    name: "姓名",
+    noAccount: "第一次来？",
+    noticedDate: "通知日期",
+    orEmail: "或使用电子邮件",
+    password: "密码",
+    passwordHint: "至少 8 个字符",
+    removedToast: "已从“我的提案”中移除",
+    save: "保存",
+    saved: "已保存",
+    savedEmpty: "您还没有保存任何提案。",
+    savedSection: "已保存",
+    savedToast: "已保存到“我的提案”",
+    signIn: "登录",
+    signInFailed: "登录未成功，请重试。",
+    signInTitle: "登录 News Next Door",
+    signInToSee: "登录后即可查看您保存和关注的提案。",
+    signInWhy: "保存提案，并在一处查看您关注的内容。没有账户也可以浏览。",
+    signOut: "退出登录",
+    stopHint: "如需停止短信，请用手机回复 STOP。",
+    team: "团队",
+    ulurpNumbers: "ULURP 编号",
+    viewDetails: "查看详情",
+  },
+  es: {
+    actionsRequested: "Trámites pedidos",
+    appLede: "Este es el registro de la ciudad. La descripción, el estado y las fechas son los que publicó la ciudad.",
+    ceqrNumber: "Número CEQR",
+    certifiedDate: "Certificado",
+    communityBoard: "Junta comunitaria",
+    continueGoogle: "Continuar con Google",
+    councilDistrict: "Distrito del concejo",
+    createAccount: "Crear cuenta",
+    createTitle: "Cree su cuenta",
+    email: "Correo",
+    filedDate: "Presentada",
+    followLinked: "Ya inició sesión, así que este seguimiento aparecerá en Mis propuestas.",
+    followingEmpty: "Todavía no hay seguimientos por mensaje ligados a su cuenta.",
+    followingSection: "Seguimiento por mensaje",
+    haveAccount: "¿Ya tiene una cuenta?",
+    linkedPhones: "Teléfono ligado",
+    myProposals: "Mis propuestas",
+    myProposalsSub: "Propuestas que guardó y propuestas que sigue por mensaje.",
+    name: "Nombre",
+    noAccount: "¿Es nuevo?",
+    noticedDate: "Avisada",
+    orEmail: "o use el correo",
+    password: "Contraseña",
+    passwordHint: "Al menos 8 caracteres",
+    removedToast: "Quitada de Mis propuestas",
+    save: "Guardar",
+    saved: "Guardada",
+    savedEmpty: "Todavía no ha guardado propuestas.",
+    savedSection: "Guardadas",
+    savedToast: "Guardada en Mis propuestas",
+    signIn: "Entrar",
+    signInFailed: "No se pudo entrar. Inténtelo de nuevo.",
+    signInTitle: "Entrar a News Next Door",
+    signInToSee: "Entre para ver lo que guardó y sigue.",
+    signInWhy: "Guarde noticias y vea lo que sigue en un solo lugar. Puede leer sin cuenta.",
+    signOut: "Salir",
+    stopHint: "Para parar los mensajes, responda STOP desde su teléfono.",
+    team: "Equipo",
+    ulurpNumbers: "Números ULURP",
+    viewDetails: "Ver detalles",
+  },
+  fr: {
+    actionsRequested: "Démarches demandées",
+    appLede: "Ceci est le dossier de la ville. La description, l'état et les dates viennent de la ville.",
+    ceqrNumber: "Numéro CEQR",
+    certifiedDate: "Certifié",
+    communityBoard: "Conseil de quartier",
+    continueGoogle: "Continuer avec Google",
+    councilDistrict: "District du conseil",
+    createAccount: "Créer un compte",
+    createTitle: "Créez votre compte",
+    email: "E-mail",
+    filedDate: "Déposé",
+    followLinked: "Vous êtes connecté, ce suivi apparaîtra dans Mes projets.",
+    followingEmpty: "Aucun suivi par message n'est lié à votre compte.",
+    followingSection: "Suivi par message",
+    haveAccount: "Vous avez déjà un compte ?",
+    linkedPhones: "Téléphone lié",
+    myProposals: "Mes projets",
+    myProposalsSub: "Les projets que vous avez gardés, et ceux que vous suivez par message.",
+    name: "Nom",
+    noAccount: "Nouveau ici ?",
+    noticedDate: "Annoncé",
+    orEmail: "ou avec l'e-mail",
+    password: "Mot de passe",
+    passwordHint: "Au moins 8 caractères",
+    removedToast: "Retiré de Mes projets",
+    save: "Garder",
+    saved: "Gardé",
+    savedEmpty: "Vous n'avez encore rien gardé.",
+    savedSection: "Gardés",
+    savedToast: "Ajouté à Mes projets",
+    signIn: "Connexion",
+    signInFailed: "La connexion n'a pas marché. Réessayez.",
+    signInTitle: "Connexion à News Next Door",
+    signInToSee: "Connectez-vous pour voir ce que vous gardez et suivez.",
+    signInWhy: "Gardez des nouvelles et voyez ce que vous suivez au même endroit. Vous pouvez lire sans compte.",
+    signOut: "Déconnexion",
+    stopHint: "Pour arrêter les messages, répondez STOP depuis votre téléphone.",
+    team: "Équipe",
+    ulurpNumbers: "Numéros ULURP",
+    viewDetails: "Voir le détail",
+  },
+  ja: {
+    actionsRequested: "求めている手続き",
+    appLede: "これは市が公表した記録です。説明、状態、日付は市の発表です。",
+    ceqrNumber: "CEQR番号",
+    certifiedDate: "認証日",
+    communityBoard: "コミュニティ委員会",
+    continueGoogle: "Googleで続ける",
+    councilDistrict: "市議会議員区",
+    createAccount: "アカウントを作る",
+    createTitle: "アカウントを作る",
+    email: "メール",
+    filedDate: "提出日",
+    followLinked: "ログイン中なので、このフォローは「自分の計画」に出ます。",
+    followingEmpty: "アカウントに結びついた短信フォローはまだありません。",
+    followingSection: "短信でフォロー",
+    haveAccount: "アカウントはありますか？",
+    linkedPhones: "結びついた電話",
+    myProposals: "自分の計画",
+    myProposalsSub: "保存した計画と、短信でフォローしている計画。",
+    name: "名前",
+    noAccount: "初めてですか？",
+    noticedDate: "通知日",
+    orEmail: "またはメール",
+    password: "パスワード",
+    passwordHint: "8文字以上",
+    removedToast: "自分の計画から外しました",
+    save: "保存",
+    saved: "保存済み",
+    savedEmpty: "まだ保存していません。",
+    savedSection: "保存済み",
+    savedToast: "自分の計画に保存しました",
+    signIn: "ログイン",
+    signInFailed: "ログインできませんでした。もう一度お試しください。",
+    signInTitle: "News Next Door にログイン",
+    signInToSee: "ログインすると、保存とフォローが見られます。",
+    signInWhy: "記事を保存し、フォローを一か所で見られます。アカウントなしでも読めます。",
+    signOut: "ログアウト",
+    stopHint: "短信を止めるには、電話から STOP と返信してください。",
+    team: "チーム",
+    ulurpNumbers: "ULURP番号",
+    viewDetails: "詳しく見る",
+  },
+  hi: {
+    actionsRequested: "माँगे गए कदम",
+    appLede: "यह शहर का अपना रिकॉर्ड है। विवरण, स्थिति और तारीखें शहर ने प्रकाशित की हैं।",
+    ceqrNumber: "CEQR नंबर",
+    certifiedDate: "प्रमाणित",
+    communityBoard: "कम्युनिटी बोर्ड",
+    continueGoogle: "Google से जारी रखें",
+    councilDistrict: "परिषद क्षेत्र",
+    createAccount: "खाता बनाएँ",
+    createTitle: "अपना खाता बनाएँ",
+    email: "ईमेल",
+    filedDate: "दाखिल",
+    followLinked: "आप साइन इन हैं, इसलिए यह फ़ॉलो मेरे प्रस्ताव में दिखेगा।",
+    followingEmpty: "आपके खाते से अभी कोई संदेश फ़ॉलो जुड़ा नहीं है।",
+    followingSection: "संदेश से फ़ॉलो",
+    haveAccount: "पहले से खाता है?",
+    linkedPhones: "जुड़ा फ़ोन",
+    myProposals: "मेरे प्रस्ताव",
+    myProposalsSub: "जो आपने सहेजे, और जिनका संदेश से फ़ॉलो करते हैं।",
+    name: "नाम",
+    noAccount: "पहली बार?",
+    noticedDate: "सूचना",
+    orEmail: "या ईमेल से",
+    password: "पासवर्ड",
+    passwordHint: "कम से कम 8 अक्षर",
+    removedToast: "मेरे प्रस्ताव से हटाया",
+    save: "सहेजें",
+    saved: "सहेजा गया",
+    savedEmpty: "आपने अभी कुछ नहीं सहेजा।",
+    savedSection: "सहेजे हुए",
+    savedToast: "मेरे प्रस्ताव में सहेजा",
+    signIn: "साइन इन",
+    signInFailed: "साइन इन नहीं हुआ। फिर कोशिश करें।",
+    signInTitle: "News Next Door में साइन इन",
+    signInToSee: "सहेजी और फ़ॉलो की हुई चीज़ें देखने के लिए साइन इन करें।",
+    signInWhy: "खबरें सहेजें और फ़ॉलो एक जगह देखें। बिना खाते के भी पढ़ सकते हैं।",
+    signOut: "साइन आउट",
+    stopHint: "संदेश बंद करने के लिए फ़ोन से STOP लिखें।",
+    team: "टीम",
+    ulurpNumbers: "ULURP नंबर",
+    viewDetails: "विवरण देखें",
+  },
+  ar: {
+    actionsRequested: "الإجراءات المطلوبة",
+    appLede: "هذا سجل المدينة. الوصف والحالة والتواريخ هي ما نشرته المدينة.",
+    ceqrNumber: "رقم CEQR",
+    certifiedDate: "تاريخ الاعتماد",
+    communityBoard: "المجلس المجتمعي",
+    continueGoogle: "المتابعة مع Google",
+    councilDistrict: "دائرة المجلس",
+    createAccount: "إنشاء حساب",
+    createTitle: "أنشئ حسابك",
+    email: "البريد",
+    filedDate: "تاريخ التقديم",
+    followLinked: "أنت مسجّل الدخول، لذا ستظهر هذه المتابعة في مشاريعي.",
+    followingEmpty: "لا توجد متابعات برسالة مرتبطة بحسابك بعد.",
+    followingSection: "المتابعة بالرسالة",
+    haveAccount: "لديك حساب؟",
+    linkedPhones: "الهاتف المرتبط",
+    myProposals: "مشاريعي",
+    myProposalsSub: "ما حفظته، وما تتابعه بالرسالة.",
+    name: "الاسم",
+    noAccount: "جديد هنا؟",
+    noticedDate: "تاريخ الإخطار",
+    orEmail: "أو بالبريد",
+    password: "كلمة السر",
+    passwordHint: "8 أحرف على الأقل",
+    removedToast: "أُزيل من مشاريعي",
+    save: "حفظ",
+    saved: "محفوظ",
+    savedEmpty: "لم تحفظ أي مشروع بعد.",
+    savedSection: "المحفوظ",
+    savedToast: "حُفظ في مشاريعي",
+    signIn: "دخول",
+    signInFailed: "لم يتم الدخول. حاول مرة أخرى.",
+    signInTitle: "الدخول إلى News Next Door",
+    signInToSee: "ادخل لترى ما حفظته وما تتابعه.",
+    signInWhy: "احفظ الأخبار وشاهد ما تتابعه في مكان واحد. يمكنك القراءة بلا حساب.",
+    signOut: "خروج",
+    stopHint: "لإيقاف الرسائل، أرسل STOP من هاتفك.",
+    team: "الفريق",
+    ulurpNumbers: "أرقام ULURP",
+    viewDetails: "عرض التفاصيل",
+  },
+  ru: {
+    actionsRequested: "Запрошенные действия",
+    appLede: "Это запись города. Описание, статус и даты опубликованы городом.",
+    ceqrNumber: "Номер CEQR",
+    certifiedDate: "Сертифицировано",
+    communityBoard: "Общественный совет",
+    continueGoogle: "Продолжить с Google",
+    councilDistrict: "Округ совета",
+    createAccount: "Создать аккаунт",
+    createTitle: "Создайте аккаунт",
+    email: "Почта",
+    filedDate: "Подана",
+    followLinked: "Вы вошли, поэтому эта подписка появится в «Моих планах».",
+    followingEmpty: "К аккаунту ещё не привязаны подписки по сообщениям.",
+    followingSection: "Подписка по сообщению",
+    haveAccount: "Уже есть аккаунт?",
+    linkedPhones: "Привязанный телефон",
+    myProposals: "Мои планы",
+    myProposalsSub: "Планы, которые вы сохранили, и планы, на которые подписаны по сообщению.",
+    name: "Имя",
+    noAccount: "Вы здесь впервые?",
+    noticedDate: "Уведомление",
+    orEmail: "или по почте",
+    password: "Пароль",
+    passwordHint: "Не меньше 8 символов",
+    removedToast: "Убрано из «Моих планов»",
+    save: "Сохранить",
+    saved: "Сохранено",
+    savedEmpty: "Вы ещё ничего не сохранили.",
+    savedSection: "Сохранённые",
+    savedToast: "Сохранено в «Мои планы»",
+    signIn: "Войти",
+    signInFailed: "Вход не прошёл. Попробуйте ещё раз.",
+    signInTitle: "Вход в News Next Door",
+    signInToSee: "Войдите, чтобы увидеть сохранённое и подписки.",
+    signInWhy: "Сохраняйте новости и смотрите подписки в одном месте. Читать можно без аккаунта.",
+    signOut: "Выйти",
+    stopHint: "Чтобы остановить сообщения, ответьте STOP с телефона.",
+    team: "Команда",
+    ulurpNumbers: "Номера ULURP",
+    viewDetails: "Подробнее",
+  },
+};
+
 const packs: Record<Lang, Pack> = { en, zh, es, fr, ja, hi, ar, ru };
+
+function text(lang: Lang, k: Key): string {
+  if (k in packs[lang]) return packs[lang][k as keyof Pack];
+  return extra[lang][k as ExtraKey];
+}
 
 const ids = new Set<string>(LANGS.map((l) => l.id));
 
@@ -1016,7 +1402,7 @@ function storedLang(): Lang {
 const LangCtx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: (k: Key) => string }>({
   lang: "en",
   setLang: () => {},
-  t: (k) => en[k],
+  t: (k) => text("en", k),
 });
 
 export function LangProvider({ children }: { children: ReactNode }) {
@@ -1030,7 +1416,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("btv-lang", l);
     setLangState(l);
   };
-  const t = (k: Key) => packs[lang][k];
+  const t = (k: Key) => text(lang, k);
   return <LangCtx.Provider value={{ lang, setLang, t }}>{children}</LangCtx.Provider>;
 }
 

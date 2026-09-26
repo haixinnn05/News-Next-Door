@@ -1,12 +1,16 @@
 import { lazy, Suspense } from "react";
 import { Footer, SideNav } from "./components/Header";
+import { SignInModal } from "./components/SignInModal";
 import { ToastProvider } from "./components/Toast";
+import { AccountProvider, useAccount } from "./lib/account";
+import { BoardProvider } from "./lib/board";
 import { LangProvider } from "./lib/i18n";
 import { MetaProvider } from "./lib/meta";
 import { match, RouterProvider, useRouter } from "./lib/router";
-import { Discover } from "./pages/Discover";
 import { ApplicationPage } from "./pages/Application";
+import { Discover } from "./pages/Discover";
 import { About, HowItWorks } from "./pages/Info";
+import { MyProposals } from "./pages/MyProposals";
 import { Phone } from "./pages/Phone";
 import { ProposalPage } from "./pages/Proposal";
 
@@ -14,6 +18,7 @@ const AdminApp = lazy(() => import("./admin/AdminApp").then((m) => ({ default: m
 
 function Routes() {
   const { path } = useRouter();
+  const { signInOpen } = useAccount();
   if (path.startsWith("/admin"))
     return (
       <Suspense fallback={null}>
@@ -22,13 +27,14 @@ function Routes() {
     );
   let page;
   const p = match("/p/:id/:tab?", path);
-  const a = match("/a/:id", path);
+  const application = match("/a/:id", path);
   if (path === "/" || path === "/discover") page = <Discover />;
-  else if (a) page = <ApplicationPage key={a.id} id={a.id} />;
+  else if (application) page = <ApplicationPage key={application.id} id={application.id} />;
   else if (p) page = <ProposalPage key={p.id} id={p.id} tab={p.tab} />;
   else if (path === "/phone") page = <Phone />;
   else if (path === "/about") page = <About />;
   else if (path === "/how-it-works") page = <HowItWorks />;
+  else if (path === "/me") page = <MyProposals />;
   else
     page = (
       <div className="container page">
@@ -44,6 +50,7 @@ function Routes() {
         <main>{page}</main>
         <Footer />
       </div>
+      {signInOpen && <SignInModal />}
     </div>
   );
 }
@@ -52,11 +59,15 @@ export function App() {
   return (
     <RouterProvider>
       <LangProvider>
-        <MetaProvider>
-          <ToastProvider>
-            <Routes />
-          </ToastProvider>
-        </MetaProvider>
+        <BoardProvider>
+          <MetaProvider>
+            <ToastProvider>
+              <AccountProvider>
+                <Routes />
+              </AccountProvider>
+            </ToastProvider>
+          </MetaProvider>
+        </BoardProvider>
       </LangProvider>
     </RouterProvider>
   );

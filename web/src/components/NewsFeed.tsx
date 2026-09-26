@@ -68,7 +68,7 @@ export function NewsFeed({
   );
 }
 
-export function NewsArticle({ story, glance }: { story: Story; glance?: { label: string; value: string | null }[] }) {
+export function NewsArticle({ story, glance, body }: { story: Story; glance?: { label: string; value: string | null }[]; body?: string | null }) {
   const { t, lang } = useLang();
   const date = storyDate(story.date, lang);
   return (
@@ -80,6 +80,7 @@ export function NewsArticle({ story, glance }: { story: Story; glance?: { label:
       <h1>{story.headline}</h1>
       {date && <p className="news-meta">{date}</p>}
       {story.location && <p className="news-place">{story.location}</p>}
+      {body && <p className="news-body">{body}</p>}
       {glance && glance.length > 0 && (
         <aside className="news-glance">
           <h2>{t("atAGlance")}</h2>

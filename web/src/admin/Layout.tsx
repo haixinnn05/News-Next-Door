@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { BrandMark, Icon, type IconName } from "../components/Icon";
 import { Link, useRouter } from "../lib/router";
+import type { TeamMember } from "./types";
 
 const NAV: { to: string; label: string; icon: IconName; also?: string[] }[] = [
   { to: "/admin/import", label: "Import Documents", icon: "upload", also: ["/admin"] },
@@ -10,7 +11,7 @@ const NAV: { to: string; label: string; icon: IconName; also?: string[] }[] = [
   { to: "/admin/subscribers", label: "Subscribers", icon: "users" },
 ];
 
-export function Layout({ children, onSignOut }: { children: ReactNode; onSignOut: () => void }) {
+export function Layout({ children, member, onSignOut }: { children: ReactNode; member: TeamMember | null; onSignOut: () => void }) {
   const { path } = useRouter();
   const p = path.replace(/\/+$/, "") || "/admin";
   const isOn = (to: string, also: string[] = []) => p === to || p.startsWith(`${to}/`) || also.includes(p);
@@ -40,6 +41,11 @@ export function Layout({ children, onSignOut }: { children: ReactNode; onSignOut
             </Link>
           </nav>
           <div className="adm-side-links">
+            {member && (
+              <span className="adm-member" title={member.name}>
+                {member.email}
+              </span>
+            )}
             <a href="/" target="_blank" rel="noreferrer">
               <Icon name="external" size={13} /> View public site
             </a>
