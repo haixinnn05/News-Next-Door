@@ -11,6 +11,15 @@ const pinSvg = (active: boolean) => {
   return `<svg class="pin" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg"><path d="M15 37s12-11.2 12-21A12 12 0 0 0 3 16c0 9.8 12 21 12 21Z" fill="${fill}" stroke="#111" stroke-width="2"/><circle cx="15" cy="15.5" r="4.6" fill="#fff"/></svg>`;
 };
 
+const WHEEL_ZOOM_PER_PX = 0.025;
+
+/** Leaflet 1.9 internals used by its own touch-pinch handler; not in the public typings. */
+type PinchableMap = L.Map & {
+  _moveStart(zoomChanged: boolean, noMoveStart: boolean): L.Map;
+  _move(center: L.LatLng, zoom: number, data?: { pinch?: boolean; round?: boolean }): L.Map;
+  _moveEnd(zoomChanged: boolean): L.Map;
+};
+
 export interface MapPlace {
   id: string;
   title: string;
@@ -45,12 +54,36 @@ export function CoverageMap({
   const { lang } = useLang();
 
   useEffect(() => {
-    if (!el.current || map.current) return;
-    const m = L.map(el.current, {
+    const node = el.current;
+    if (!node || map.current) return;
+    const m = L.map(node, {
       zoomControl: false,
       attributionControl: false,
       scrollWheelZoom: false,
+      zoomSnap: 0,
     }).setView([40.74, -73.92], 12);
+    // Leaflet's wheel zoom debounces, snaps and animates each step, which makes trackpad pinches crawl.
+    // Non-animated setView/setZoomAround would blank every tile per event, so move the view the way
+    // Leaflet's own touch pinch does (internal _move) and finish with a single zoomend/moveend.
+    const lm = m as PinchableMap;
+    let wheelEnd: ReturnType<typeof setTimeout> | undefined;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const step = Math.max(-1, Math.min(1, px * WHEEL_ZOOM_PER_PX));
+      const zoom = Math.max(m.getMinZoom(), Math.min(m.getMaxZoom(), m.getZoom() - step));
+      const half = m.getSize().divideBy(2);
+      const offset = m.mouseEventToContainerPoint(e).subtract(half).multiplyBy(1 - 1 / m.getZoomScale(zoom));
+      const center = m.containerPointToLatLng(half.add(offset));
+      if (wheelEnd === undefined) lm._moveStart(true, false);
+      else clearTimeout(wheelEnd);
+      lm._move(center, zoom, { pinch: true, round: false });
+      wheelEnd = setTimeout(() => {
+        wheelEnd = undefined;
+        lm._moveEnd(true);
+      }, 150);
+    };
+    node.addEventListener("wheel", onWheel, { passive: false });
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
       maxZoom: 16,
       className: "map-tiles",
@@ -58,6 +91,8 @@ export function CoverageMap({
     layer.current = L.layerGroup().addTo(m);
     map.current = m;
     return () => {
+      node.removeEventListener("wheel", onWheel);
+      clearTimeout(wheelEnd);
       m.remove();
       map.current = null;
       outline.current = null;
@@ -66,19 +101,22 @@ export function CoverageMap({
 
   useEffect(() => {
     const m = map.current;
-    const g = layer.current;
-    if (!m || !g) return;
-    g.clearLayers();
-    markers.current.clear();
+    if (!m) return;
     outline.current?.remove();
     outline.current = null;
-    if (boundary) {
-      outline.current = L.geoJSON({ type: "Feature", geometry: boundary, properties: {} } as GeoJSON.Feature, {
-        style: { color: "#111", weight: 2.5, opacity: 1, fillColor: "#e10600", fillOpacity: 0.12 },
-      }).addTo(m);
-      const frame = outline.current.getBounds();
-      if (frame.isValid()) m.fitBounds(frame.pad(0.45));
-    }
+    if (!boundary) return;
+    outline.current = L.geoJSON({ type: "Feature", geometry: boundary, properties: {} } as GeoJSON.Feature, {
+      style: { color: "#111", weight: 2.5, opacity: 1, fillColor: "#e10600", fillOpacity: 0.12 },
+    }).addTo(m);
+    const frame = outline.current.getBounds();
+    if (frame.isValid()) m.fitBounds(frame.pad(0.45));
+  }, [boundary]);
+
+  useEffect(() => {
+    const g = layer.current;
+    if (!g) return;
+    g.clearLayers();
+    markers.current.clear();
     for (const [name, lat, lng] of labels) {
       L.marker([lat, lng], {
         interactive: false,
@@ -109,7 +147,7 @@ export function CoverageMap({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposals, places, boundary, labels, lang, navigate, onHover]);
+  }, [proposals, places, labels, lang, navigate, onHover]);
 
   useEffect(() => {
     for (const [id, mk] of markers.current) {
