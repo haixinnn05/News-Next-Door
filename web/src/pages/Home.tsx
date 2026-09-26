@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Icon } from "../components/Icon";
 import { HeroSkyline } from "../components/Illustration";
+import { LiveApplications } from "../components/LiveApplications";
 import { ProposalCardView } from "../components/ProposalCard";
 import { api } from "../lib/api";
 import { useLang } from "../lib/i18n";
@@ -63,6 +64,7 @@ export function Home() {
       </section>
 
       <section className="container">
+        <LiveApplications />
         <div className="section-head">
           <h2>{t("recentProposals")}</h2>
           <Link to="/discover" className="row small" style={{ gap: 6, color: "var(--ink-2)" }}>

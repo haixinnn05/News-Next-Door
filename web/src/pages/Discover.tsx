@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CoverageMap } from "../components/CoverageMap";
 import { Icon } from "../components/Icon";
+import { LiveApplications } from "../components/LiveApplications";
 import { ProposalRow } from "../components/ProposalCard";
 import { api } from "../lib/api";
 import { useLang, type Key } from "../lib/i18n";
@@ -24,6 +25,7 @@ export function Discover() {
   const q = query.get("q") ?? "";
   const cat = query.get("category") ?? "all";
   const res = useLoad(() => api.search(q, cat), [q, cat]);
+  const apps = useLoad(() => api.applications(), []);
   const [hovered, setHovered] = useState<string | null>(null);
   const set = (next: { q?: string; category?: string }) => {
     const p = new URLSearchParams();
@@ -35,6 +37,14 @@ export function Discover() {
   };
   const data = res.data;
   const results = data?.results ?? [];
+  const showLive = !q && (cat === "all" || cat === "land_use");
+  const places = useMemo(
+    () =>
+      showLive
+        ? (apps.data?.applications ?? []).flatMap((a) => (a.location ? [{ id: a.id, title: a.name, lat: a.location.lat, lng: a.location.lng, url: a.zap_url }] : []))
+        : [],
+    [apps.data, showLive],
+  );
 
   return (
     <div className="container page">
@@ -62,6 +72,8 @@ export function Discover() {
               </span>
             </div>
           )}
+
+          {showLive && <LiveApplications source={apps} hovered={hovered} onHover={setHovered} />}
 
           <div className="results">
             {res.loading && !data && [0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 80 }} />)}
@@ -102,7 +114,7 @@ export function Discover() {
             </p>
           )}
         </div>
-        <CoverageMap proposals={results} hovered={hovered} onHover={setHovered} />
+        <CoverageMap proposals={results} places={places} hovered={hovered} onHover={setHovered} />
       </div>
     </div>
   );

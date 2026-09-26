@@ -13,6 +13,7 @@ import { translateCardToChinese } from "../services/grok.ts";
 import { queueTestMessage, reconcileReminders, runDueNotifications, type NotificationRow, type SubscriberRow } from "../services/notifications.ts";
 import { coverage, getProposal, listPublished, proposalCard, proposalDetail, publishDraft, search, type ProposalRow } from "../services/proposals.ts";
 import { createFollowCode, followStatus, handleInbound } from "../services/subscriptions.ts";
+import { queensCb2Applications } from "../services/zap.ts";
 
 const MIME: Record<string, string> = { ".mp3": "audio/mpeg", ".flac": "audio/flac", ".pdf": "application/pdf", ".html": "text/html; charset=utf-8" };
 
@@ -61,6 +62,8 @@ export function createApp(db: Db, opts: { photonEnabled: boolean }) {
     const r = search(db, c.req.query("q") ?? "", c.req.query("category") ?? "all");
     return c.json(r);
   });
+
+  app.get("/api/applications", async (c) => c.json(await queensCb2Applications()));
 
   app.get("/api/proposals/:id", (c) => {
     const p = getProposal(db, c.req.param("id"));

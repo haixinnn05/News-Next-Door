@@ -1,5 +1,33 @@
 export type Category = "land_use" | "transportation" | "parks_environment" | "other";
 
+export type ZapPublicStatus = "Filed" | "In Public Review" | "Noticed";
+
+export interface ZapApplication {
+  id: string;
+  name: string;
+  brief: string | null;
+  public_status: ZapPublicStatus;
+  applicant: string | null;
+  applicant_type: string | null;
+  ulurp_numbers: string | null;
+  ceqr_number: string | null;
+  districts: string;
+  council_district: string | null;
+  actions: { code: string; label: string }[];
+  milestone: string | null;
+  milestone_date: string | null;
+  filed_date: string | null;
+  noticed_date: string | null;
+  certified_date: string | null;
+  zap_url: string;
+  location: { label: string; lat: number; lng: number; lot_count: number } | null;
+}
+
+export interface ZapFeed {
+  source: { name: string; dataset_url: string; board: string; fetched_at: string };
+  applications: ZapApplication[];
+}
+
 export interface PublicEvent {
   id: string;
   key: string;

@@ -1,7 +1,6 @@
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 import { useLang } from "../lib/i18n";
-import { useMeta } from "../lib/meta";
 import { useRouter } from "../lib/router";
 import type { ProposalCard } from "../lib/types";
 import { titleOf } from "../lib/format";
@@ -14,17 +13,26 @@ const OUTLINE: [number, number][] = [
   [40.7266, -73.935], [40.7315, -73.948], [40.7385, -73.957], [40.747, -73.9612], [40.754, -73.959],
 ];
 
-const pinSvg = (active: boolean) =>
-  `<svg class="pin" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg"><path d="M15 37s12-11.2 12-21A12 12 0 0 0 3 16c0 9.8 12 21 12 21Z" fill="${active ? "#24503a" : "#1b3a2b"}" stroke="#fff" stroke-width="2"/><circle cx="15" cy="15.5" r="4.6" fill="#fff"/></svg>`;
+const pinSvg = (active: boolean, color = "#1b3a2b") => {
+  const fill = color === "#1b3a2b" ? (active ? "#24503a" : "#1b3a2b") : active ? "#1e3a8a" : color;
+  return `<svg class="pin" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg"><path d="M15 37s12-11.2 12-21A12 12 0 0 0 3 16c0 9.8 12 21 12 21Z" fill="${fill}" stroke="#fff" stroke-width="2"/><circle cx="15" cy="15.5" r="4.6" fill="#fff"/></svg>`;
+};
 
-export function CoverageMap({ proposals, hovered, onHover }: { proposals: ProposalCard[]; hovered: string | null; onHover: (id: string | null) => void }) {
+export interface MapPlace {
+  id: string;
+  title: string;
+  lat: number;
+  lng: number;
+  url: string;
+}
+
+export function CoverageMap({ proposals, places = [], hovered, onHover }: { proposals: ProposalCard[]; places?: MapPlace[]; hovered: string | null; onHover: (id: string | null) => void }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
   const markers = useRef(new Map<string, L.Marker>());
   const { navigate } = useRouter();
   const { t, lang } = useLang();
-  const meta = useMeta();
 
   useEffect(() => {
     if (!el.current || map.current) return;
@@ -54,40 +62,53 @@ export function CoverageMap({ proposals, hovered, onHover }: { proposals: Propos
     g.clearLayers();
     markers.current.clear();
     const pts: L.LatLngExpression[] = [];
-    for (const p of proposals) {
-      if (!p.address) continue;
-      const mk = L.marker([p.address.lat, p.address.lng], {
-        icon: L.divIcon({ className: "", html: pinSvg(false), iconSize: [30, 38], iconAnchor: [15, 37] }),
-        title: p.title,
+    const add = (id: string, lat: number, lng: number, title: string, color: string | undefined, onClick: () => void) => {
+      const mk = L.marker([lat, lng], {
+        icon: L.divIcon({ className: "", html: pinSvg(false, color), iconSize: [30, 38], iconAnchor: [15, 37] }),
+        title,
         riseOnHover: true,
+        zIndexOffset: color ? 400 : 0,
       })
-        .bindTooltip(titleOf(p, lang), { direction: "top", offset: [0, -36], className: "pin-tip" })
-        .on("click", () => navigate(`/p/${p.id}`))
-        .on("mouseover", () => onHover(p.id))
+        .bindTooltip(title, { direction: "top", offset: [0, -36], className: "pin-tip" })
+        .on("click", onClick)
+        .on("mouseover", () => onHover(id))
         .on("mouseout", () => onHover(null));
       mk.addTo(g);
-      markers.current.set(p.id, mk);
-      pts.push([p.address.lat, p.address.lng]);
+      markers.current.set(id, mk);
+      pts.push([lat, lng]);
+    };
+    for (const p of proposals) {
+      if (!p.address) continue;
+      add(p.id, p.address.lat, p.address.lng, titleOf(p, lang), undefined, () => navigate(`/p/${p.id}`));
+    }
+    for (const place of places) {
+      add(place.id, place.lat, place.lng, place.title, "#2d3f82", () => window.open(place.url, "_blank", "noopener,noreferrer"));
     }
     if (pts.length === 1) m.setView(pts[0], 15);
     else if (pts.length > 1) m.fitBounds(L.latLngBounds(pts).pad(0.35), { maxZoom: 15 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposals, lang]);
+  }, [proposals, places, lang]);
 
   useEffect(() => {
+    const live = new Set(places.map((p) => p.id));
     for (const [id, mk] of markers.current) {
-      mk.setIcon(L.divIcon({ className: "", html: pinSvg(id === hovered), iconSize: id === hovered ? [36, 46] : [30, 38], iconAnchor: id === hovered ? [18, 45] : [15, 37] }));
-      if (id === hovered) mk.openTooltip();
+      const on = id === hovered;
+      mk.setIcon(L.divIcon({ className: "", html: pinSvg(on, live.has(id) ? "#2d3f82" : undefined), iconSize: on ? [36, 46] : [30, 38], iconAnchor: on ? [18, 45] : [15, 37] }));
+      if (on) mk.openTooltip();
       else mk.closeTooltip();
     }
-  }, [hovered]);
+  }, [hovered, places]);
 
   return (
     <div className="map-wrap">
       <div ref={el} style={{ width: "100%", height: "100%" }} aria-label="Map of Queens Community Board 2 showing proposal locations" role="region" />
       <div className="map-legend">
         <span className="dot" /> {t("coveredArea")}
-        {meta && <span className="subtle" style={{ fontWeight: 500 }}>· {meta.coverage.addresses.length} {lang === "zh" ? "个已收录地址" : "indexed addresses"}</span>}
+        {places.length > 0 && (
+          <>
+            <span className="dot live" /> {t("livePins")}
+          </>
+        )}
       </div>
       <div className="map-zoom">
         <button onClick={() => map.current?.zoomIn()} aria-label="Zoom in">
