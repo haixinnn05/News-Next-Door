@@ -288,7 +288,7 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
       uncertain: n("SELECT COUNT(*) n FROM notifications WHERE state='uncertain'"),
       integrations: {
         grok: { enabled: config.grok.enabled, model: config.grok.model },
-        elevenlabs: { enabled: config.elevenlabs.enabled, voice: config.elevenlabs.voiceId, model: config.elevenlabs.ttsModel, dub_target: config.elevenlabs.dubbingTarget },
+        elevenlabs: { enabled: config.elevenlabs.enabled, voice: `EN ${config.elevenlabs.voiceEn} · ZH ${config.elevenlabs.voiceZh}`, model: config.elevenlabs.ttsModel, dub_target: config.elevenlabs.dubbingTarget },
         photon: { enabled: opts.photonEnabled, line_address: config.photon.lineAddress || null, sdk: "spectrum-ts@12.10.1" },
       },
       public_base_url: config.publicBaseUrl,

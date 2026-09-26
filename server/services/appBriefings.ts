@@ -14,7 +14,7 @@ import { all, get, run, type Db } from "../db.ts";
 import { formatDateOnly, HttpError, newId, nowIso } from "../lib/util.ts";
 import { headlineOfApp } from "../../web/src/lib/story.ts";
 import { zhCivic, zhTranslated } from "../../web/src/lib/zhCivic.ts";
-import { saveFile, tts } from "./audio.ts";
+import { saveFile, tts, voiceFor } from "./audio.ts";
 import { parseJsonReply } from "./extraction.ts";
 import { grokJson } from "./grok.ts";
 import { appChanges, appConfirmationText, appUpdateText, GONE_STATUS, pack, shortAbout, TEXT_LANGS, textLang, type AppSnapshot, type TextLang } from "./messages.ts";
@@ -270,9 +270,9 @@ function plan(db: Db, a: ZapApplication) {
   const v = getVersion(db, a);
   const ready = v?.status === "ready" && v.simple_en && v.zh ? v : null;
   const enText = ready?.simple_en ?? appScript(a);
-  const en = { text: enText, hash: hashOf(enText), method: ready ? "tts_simple" : "tts" };
+  const en = { text: enText, hash: hashOf(`${voiceFor("en")}\n${enText}`), method: ready ? "tts_simple" : "tts" };
   const zhText = ready?.zh ?? appScriptZh(a);
-  const zh = { text: zhText, hash: zhText ? hashOf(zhText) : "", method: ready ? "tts_grok" : "tts_page" };
+  const zh = { text: zhText, hash: zhText ? hashOf(`${voiceFor("zh")}\n${zhText}`) : "", method: ready ? "tts_grok" : "tts_page" };
   return { version: ready, en, zh };
 }
 
@@ -296,9 +296,9 @@ export function appAudioView(db: Db, a: ZapApplication): AppAudioView {
   };
 }
 
-async function narrate(db: Db, rowId: string, script: string): Promise<void> {
+async function narrate(db: Db, rowId: string, script: string, lang: "en" | "zh"): Promise<void> {
   try {
-    const fp = saveFile(rowId, ".mp3", await tts(script));
+    const fp = saveFile(rowId, ".mp3", await tts(script, lang));
     run(db, "UPDATE app_audio SET status='ready', file_path=?, mime_type='audio/mpeg', error=NULL, updated_at=? WHERE id=?", fp, nowIso(), rowId);
   } catch (e) {
     run(db, "UPDATE app_audio SET status='failed', error=?, updated_at=? WHERE id=?", (e as Error).message, nowIso(), rowId);
@@ -342,10 +342,10 @@ export function requestAppAudio(db: Db, a: ZapApplication, lang: "en" | "zh"): A
   }
   const p = plan(db, a);
   const enId = claim(db, a, p.en.hash, "en", p.en.method, p.en.text);
-  if (enId) void narrate(db, enId, p.en.text);
+  if (enId) void narrate(db, enId, p.en.text, "en");
   if (lang === "zh" && p.zh.text) {
     const zhId = claim(db, a, p.zh.hash, "zh", p.zh.method, p.zh.text);
-    if (zhId) void narrate(db, zhId, p.zh.text);
+    if (zhId) void narrate(db, zhId, p.zh.text, "zh");
   }
   return appAudioView(db, a);
 }

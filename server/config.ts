@@ -55,7 +55,9 @@ export const config = {
   },
   elevenlabs: {
     apiKey: env("ELEVENLABS_API_KEY"),
-    voiceId: env("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
+    /** English is read by an American voice ("Sarah"), Chinese by a native Mandarin voice ("Jill", Voice Library). */
+    voiceEn: env("ELEVENLABS_VOICE_ID_EN", "EXAVITQu4vr4xnSDxMaL"),
+    voiceZh: env("ELEVENLABS_VOICE_ID_ZH", "V3z1DARAbkkTVEx5lmEl"),
     ttsModel: env("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2"),
     dubbingTarget: env("ELEVENLABS_DUB_TARGET", "zh"),
     get enabled() {
