@@ -91,9 +91,12 @@ export function saveScript(db: Db, proposalId: string, script: string, approve: 
   run(db, "UPDATE audio SET script=?, script_approved=?, updated_at=? WHERE id=?", script.trim(), approve ? 1 : 0, nowIso(), row.id);
 }
 
-/** Read text aloud: English with the American voice, Chinese with the native Mandarin voice. */
-export async function tts(text: string, lang: "en" | "zh"): Promise<Buffer> {
-  const voice = lang === "zh" ? config.elevenlabs.voiceZh : config.elevenlabs.voiceEn;
+/**
+ * Read text aloud: Chinese with the native Mandarin voice, everything else with the American voice
+ * (the multilingual model speaks the text's language).
+ */
+export async function tts(text: string, lang: string): Promise<Buffer> {
+  const voice = voiceFor(lang);
   const res = await fetch(`${XI}/text-to-speech/${voice}?output_format=mp3_44100_128`, {
     method: "POST",
     headers: xiHeaders({ "Content-Type": "application/json", Accept: "audio/mpeg" }),
@@ -105,7 +108,9 @@ export async function tts(text: string, lang: "en" | "zh"): Promise<Buffer> {
 }
 
 /** Which voice a language uses; part of each audio cache key, so changing a voice re-records. */
-export const voiceFor = (lang: "en" | "zh") => (lang === "zh" ? config.elevenlabs.voiceZh : config.elevenlabs.voiceEn);
+export function voiceFor(lang: string): string {
+  return lang === "zh" ? config.elevenlabs.voiceZh : config.elevenlabs.voiceEn;
+}
 
 export function saveFile(id: string, ext: string, buf: Buffer): string {
   fs.mkdirSync(config.audioDir, { recursive: true });

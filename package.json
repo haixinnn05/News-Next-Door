@@ -15,7 +15,8 @@
     "smoke:grok": "tsx server/scripts/smokeGrok.ts",
     "smoke:elevenlabs": "tsx server/scripts/smokeElevenLabs.ts",
     "smoke:photon": "tsx server/scripts/smokePhoton.ts",
-    "smoke:photon-send": "tsx server/scripts/sendPhoton.ts"
+    "smoke:photon-send": "tsx server/scripts/sendPhoton.ts",
+    "postinstall": "patch-package"
   },
   "engines": {
     "node": ">=23.4"
@@ -41,6 +42,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "patch-package": "^8.0.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vite": "^8.3.1"

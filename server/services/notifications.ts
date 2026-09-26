@@ -1,7 +1,7 @@
 import { config } from "../config.ts";
 import { all, get, run, tx, type Db } from "../db.ts";
 import { newId, nowIso } from "../lib/util.ts";
-import { confirmationText, reminderText, updateText, type TextLang } from "./messages.ts";
+import { appConfirmationText, confirmationText, langMenuText, languagePoll, reminderText, textLang, updateText, type AppSnapshot, type TextLang } from "./messages.ts";
 import { eventTiming, getEvents, getProposal, MEETING_TYPES, nextEvent, type EventRow, type ProposalRow, type PublishChange } from "./proposals.ts";
 import { transportFor } from "./transport.ts";
 
@@ -129,14 +129,26 @@ export function reconcileReminders(db: Db, proposalId: string): { scheduled: num
   return { scheduled, cancelled };
 }
 
-/** Called after a subscription becomes active: queue the confirmation (sent now) and any reminders. */
-export function onSubscribed(db: Db, sub: SubscriptionRow, subscriber: SubscriberRow, confirmKey: string): void {
-  const p = getProposal(db, sub.proposal_id)!;
+/**
+ * How long a new follow's welcome waits for the resident to pick a language in the poll. Picking one
+ * releases it at once, in that language; if nobody picks, it goes out in the page's language.
+ */
+export const WELCOME_WAIT_MS = 2 * 60_000;
+const welcomeDue = (waitForLanguage: boolean) => new Date(Date.now() + (waitForLanguage ? WELCOME_WAIT_MS : 0)).toISOString();
+
+function proposalWelcome(db: Db, p: ProposalRow, lang: TextLang) {
   const events = getEvents(db, p.id);
   const next = nextEvent(events);
   const reminderFor = events
     .filter((e) => reminderEligible(e) && Date.parse(e.starts_at!) - LEAD_MS() > Date.now())
     .sort((a, b) => a.starts_at!.localeCompare(b.starts_at!))[0];
+  return { next, body: confirmationText(p, next, reminderFor, primarySourceUrl(db, p.id), lang) };
+}
+
+/** Called after a subscription becomes active: queue the confirmation and any reminders. */
+export function onSubscribed(db: Db, sub: SubscriptionRow, subscriber: SubscriberRow, confirmKey: string, waitForLanguage = false): void {
+  const p = getProposal(db, sub.proposal_id)!;
+  const { next, body } = proposalWelcome(db, p, textLang(subscriber.preferred_language));
   insertNotification(db, {
     delivery_key: `confirm:${sub.id}:${confirmKey}`,
     kind: "confirmation",
@@ -147,8 +159,8 @@ export function onSubscribed(db: Db, sub: SubscriptionRow, subscriber: Subscribe
     event_version: next?.version ?? null,
     proposal_version: p.version,
     label: "Follow confirmation",
-    body: confirmationText(p, next, reminderFor, primarySourceUrl(db, p.id), subscriber.preferred_language),
-    due_at: nowIso(),
+    body,
+    due_at: welcomeDue(waitForLanguage),
     state: "scheduled",
     is_demo: p.is_sample ? 1 : 0,
   });
@@ -204,6 +216,28 @@ export function queueReply(db: Db, subscriberId: string, text: string, key: stri
     label,
     body: text,
     due_at: nowIso(),
+    state: "scheduled",
+    is_demo: 0,
+  });
+}
+
+/**
+ * Ask a new subscriber which language to text them in, just before their welcome. On iMessage this is a
+ * tappable poll; elsewhere (or if the poll can't be sent) it's the numbered LANGUAGE menu, stored as the body.
+ */
+export function queueLanguagePoll(db: Db, subscriberId: string, lang: TextLang, key: string): void {
+  insertNotification(db, {
+    delivery_key: `langpoll:${key}`,
+    kind: "language_poll",
+    subscriber_id: subscriberId,
+    subscription_id: null,
+    proposal_id: null,
+    event_id: null,
+    event_version: null,
+    proposal_version: null,
+    label: "Language menu",
+    body: langMenuText(lang),
+    due_at: new Date(Date.now() - 1000).toISOString(), // ahead of the welcome queued right after it
     state: "scheduled",
     is_demo: 0,
   });
@@ -268,6 +302,33 @@ function logDelivery(db: Db, n: NotificationRow, transport: string, outcome: str
   run(db, "INSERT INTO delivery_log (notification_id, direction, transport, subscriber_id, text, outcome, detail, at) VALUES (?,?,?,?,?,?,?,?)", n.id, "outbound", transport, n.subscriber_id, n.body, outcome, detail, nowIso());
 }
 
+/** Send a follow's held welcome now: the resident just picked their language. Returns how many were released. */
+export function releaseWelcomes(db: Db, subscriberId: string): number {
+  const now = nowIso();
+  return Number(run(db, "UPDATE notifications SET due_at=?, updated_at=? WHERE subscriber_id=? AND kind='confirmation' AND state='scheduled' AND due_at > ?", now, now, subscriberId, now).changes);
+}
+
+/**
+ * Welcomes and reminders are written in the resident's language at send time, so a language picked after
+ * following (poll, LANGUAGE, "Español") applies to them. Other texts keep the body they were queued with.
+ */
+function bodyInCurrentLanguage(db: Db, n: NotificationRow, lang: TextLang): string | null {
+  if (n.kind === "confirmation" && n.proposal_id) {
+    const p = getProposal(db, n.proposal_id);
+    return p ? proposalWelcome(db, p, lang).body : null;
+  }
+  if (n.kind === "confirmation" && n.app_subscription_id) {
+    const s = get<{ project_id: string; snapshot_json: string }>(db, "SELECT project_id, snapshot_json FROM app_subscriptions WHERE id=?", n.app_subscription_id);
+    return s ? appConfirmationText(s.project_id, JSON.parse(s.snapshot_json) as AppSnapshot, `https://zap.planning.nyc.gov/projects/${encodeURIComponent(s.project_id)}`, lang) : null;
+  }
+  if (n.kind === "reminder" && n.proposal_id && n.event_id) {
+    const p = getProposal(db, n.proposal_id);
+    const e = get<EventRow>(db, "SELECT * FROM events WHERE id=?", n.event_id);
+    return p && e ? reminderText(p, e, primarySourceUrl(db, p.id), lang) : null;
+  }
+  return null;
+}
+
 export async function deliver(db: Db, n: NotificationRow): Promise<void> {
   // claim atomically so two ticks (or a restart) can never send the same row twice
   const claimed = run(db, "UPDATE notifications SET state='sending', attempts=attempts+1, updated_at=? WHERE id=? AND state='scheduled'", nowIso(), n.id);
@@ -278,11 +339,16 @@ export async function deliver(db: Db, n: NotificationRow): Promise<void> {
     return;
   }
   const sb = get<SubscriberRow>(db, "SELECT * FROM subscribers WHERE id = ?", n.subscriber_id)!;
+  const current = bodyInCurrentLanguage(db, n, textLang(sb.preferred_language));
+  if (current && current !== n.body) {
+    run(db, "UPDATE notifications SET body=? WHERE id=?", current, n.id);
+    n = { ...n, body: current };
+  }
   let transportName = sb.transport;
   try {
     const t = transportFor(db, sb);
     transportName = t.name;
-    const { providerMessageId } = await t.send(sb, n.body);
+    const { providerMessageId } = n.kind === "language_poll" ? await sendLanguagePoll(t, sb, n.body) : await t.send(sb, n.body);
     run(db, "UPDATE notifications SET state='sent', provider_message_id=?, sent_at=?, last_error=NULL, updated_at=? WHERE id=?", providerMessageId, nowIso(), nowIso(), n.id);
     logDelivery(db, n, transportName, "sent", providerMessageId);
   } catch (e) {
@@ -298,6 +364,19 @@ export async function deliver(db: Db, n: NotificationRow): Promise<void> {
       run(db, "UPDATE notifications SET state='failed', last_error=?, updated_at=? WHERE id=?", msg, nowIso(), n.id);
     }
     logDelivery(db, n, transportName, "failed", msg);
+  }
+}
+
+async function sendLanguagePoll(t: ReturnType<typeof transportFor>, sb: SubscriberRow, fallbackText: string) {
+  if (!t.sendPoll) return t.send(sb, fallbackText);
+  const { title, options } = languagePoll(textLang(sb.preferred_language));
+  try {
+    // iMessage doesn't show a poll's title, so ask the question in a text first, then send the poll
+    await t.send(sb, `🌍 ${title} 👇`);
+    return await t.sendPoll(sb, title, options);
+  } catch (e) {
+    console.warn("[photon] language poll failed, sending the text menu instead:", (e as Error).message);
+    return t.send(sb, fallbackText);
   }
 }
 

@@ -1,0 +1,13 @@
+diff --git a/node_modules/@spectrum-ts/core/dist/stream-CwA4L5aB.js b/node_modules/@spectrum-ts/core/dist/stream-CwA4L5aB.js
+index 73817c0..e536297 100644
+--- a/node_modules/@spectrum-ts/core/dist/stream-CwA4L5aB.js
++++ b/node_modules/@spectrum-ts/core/dist/stream-CwA4L5aB.js
+@@ -1026,7 +1026,7 @@ function leaveSpace() {
+ const pollChoiceSchema = z.object({ title: z.string().nonempty() });
+ const pollSchema = z.object({
+ 	type: z.literal("poll"),
+-	title: z.string().nonempty().max(300),
++	title: z.string().max(300),
+ 	options: z.array(pollChoiceSchema).min(2).max(10)
+ });
+ const pollOptionSchema = z.object({

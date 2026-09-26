@@ -3,7 +3,7 @@ import { config } from "../config.ts";
 import { get, run, tx, type Db } from "../db.ts";
 import { HttpError, newId, nowIso } from "../lib/util.ts";
 import { expiredText, helpText, LANG_NAMES, langMenuText, langSetText, stopText, TEXT_LANGS, textLang, type TextLang } from "./messages.ts";
-import { cancelQueuedFor, onSubscribed, queueReply, type SubscriberRow, type SubscriptionRow } from "./notifications.ts";
+import { cancelQueuedFor, onSubscribed, queueLanguagePoll, queueReply, releaseWelcomes, type SubscriberRow, type SubscriptionRow } from "./notifications.ts";
 import { getProposal } from "./proposals.ts";
 import { aboutOf, onAppSubscribed, snapshotOf, type AppSubscriptionRow } from "./appBriefings.ts";
 import type { ZapApplication } from "./zap.ts";
@@ -173,7 +173,9 @@ export function handleInbound(db: Db, ev: Inbound): { action: string; subscriber
         run(db, "UPDATE subscriptions SET active=1 WHERE id=?", sub.id);
       }
       // one confirmation per code — resending the same code does not produce a second confirmation
-      onSubscribed(db, sub, get<SubscriberRow>(db, "SELECT * FROM subscribers WHERE id=?", sb.id)!, code);
+      const subscriber = get<SubscriberRow>(db, "SELECT * FROM subscribers WHERE id=?", sb.id)!;
+      askLanguage(db, subscriber, code);
+      onSubscribed(db, sub, subscriber, code, true);
       if (!fc.used_at) run(db, "UPDATE follow_codes SET used_at=?, subscription_id=? WHERE code=?", nowIso(), sub.id, code);
       return { action: "subscribed" };
     });
@@ -195,7 +197,16 @@ export function handleInbound(db: Db, ev: Inbound): { action: string; subscriber
   if (picked) {
     const sb = known ?? upsertSubscriberInactive(db, ev);
     run(db, "UPDATE subscribers SET preferred_language=?, language_chosen_at=? WHERE id=?", picked, nowIso(), sb.id);
-    queueReply(db, sb.id, langSetText(picked), `langset:${ev.providerEventId}`, "Language set");
+    // a welcome waiting on this choice goes out now, in the new language, and is the confirmation;
+    // otherwise (changing language later) say so. The marker keeps a bare number from counting twice.
+    const released = releaseWelcomes(db, sb.id);
+    if (released)
+      run(
+        db,
+        "INSERT INTO notifications (id, delivery_key, kind, subscriber_id, label, body, due_at, state, last_error, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        newId("ntf"), `langset:${ev.providerEventId}`, "reply", sb.id, "Language set", langSetText(picked), nowIso(), "cancelled", "Not sent: the welcome went out in the chosen language instead", nowIso(), nowIso(),
+      );
+    else queueReply(db, sb.id, langSetText(picked), `langset:${ev.providerEventId}`, "Language set");
     return { action: "language_set" };
   }
   if (known?.active) {
@@ -247,11 +258,23 @@ function languageRequested(text: string): TextLang | null {
   return null;
 }
 
-/** A bare number only picks a language right after we sent the menu, and only until they've picked one. */
+/**
+ * Every new follow starts with the language poll, then the welcome. Keyed by the follow code, so texting
+ * the same code again doesn't ask again.
+ */
+function askLanguage(db: Db, sb: SubscriberRow, code: string): void {
+  queueLanguagePoll(db, sb.id, textLang(sb.preferred_language), code);
+}
+
+/** A bare number only picks a language right after we sent the menu, and only until they've picked one after it. */
 function menuShownRecently(db: Db, subscriberId: string): boolean {
   const since = new Date(Date.now() - 15 * 60_000).toISOString();
-  const chosen = get<{ language_chosen_at: string | null }>(db, "SELECT language_chosen_at FROM subscribers WHERE id=?", subscriberId)?.language_chosen_at ?? "";
-  return !!get(db, "SELECT 1 FROM notifications WHERE subscriber_id=? AND label='Language menu' AND created_at > ? AND created_at > ?", subscriberId, since, chosen);
+  return !!get(
+    db,
+    `SELECT 1 FROM notifications m WHERE m.subscriber_id=? AND m.label='Language menu' AND m.created_at > ?
+       AND NOT EXISTS (SELECT 1 FROM notifications c WHERE c.subscriber_id=m.subscriber_id AND c.label='Language set' AND c.rowid > m.rowid)`,
+    subscriberId, since,
+  );
 }
 
 function subscribeToApp(db: Db, ev: Inbound, fc: AppFollowCodeRow): { action: string } {
@@ -268,7 +291,9 @@ function subscribeToApp(db: Db, ev: Inbound, fc: AppFollowCodeRow): { action: st
       run(db, "UPDATE app_subscriptions SET active=1, snapshot_json=?, checked_at=NULL WHERE id=?", fc.snapshot_json, sub.id);
       sub = get<AppSubscriptionRow>(db, "SELECT * FROM app_subscriptions WHERE id=?", sub.id)!;
     }
-    onAppSubscribed(db, sub, get<SubscriberRow>(db, "SELECT * FROM subscribers WHERE id=?", sb.id)!, fc.code);
+    const subscriber = get<SubscriberRow>(db, "SELECT * FROM subscribers WHERE id=?", sb.id)!;
+    askLanguage(db, subscriber, fc.code);
+    onAppSubscribed(db, sub, subscriber, fc.code, true);
     if (!fc.used_at) run(db, "UPDATE app_follow_codes SET used_at=?, subscription_id=? WHERE code=?", nowIso(), sub.id, fc.code);
     return { action: "subscribed" };
   });

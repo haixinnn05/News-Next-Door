@@ -18,7 +18,7 @@ import { saveFile, tts, voiceFor } from "./audio.ts";
 import { parseJsonReply } from "./extraction.ts";
 import { grokJson } from "./grok.ts";
 import { appChanges, appConfirmationText, appUpdateText, GONE_STATUS, pack, shortAbout, TEXT_LANGS, textLang, type AppSnapshot, type TextLang } from "./messages.ts";
-import { insertNotification, type SubscriberRow } from "./notifications.ts";
+import { insertNotification, WELCOME_WAIT_MS, type SubscriberRow } from "./notifications.ts";
 import { applicationById, type ZapApplication } from "./zap.ts";
 
 // ---------------------------------------------------------------- audio
@@ -389,7 +389,7 @@ export interface AppSubscriptionRow {
 }
 
 /** Queue the confirmation for a new or renewed follow; one per code, like proposal follows. */
-export function onAppSubscribed(db: Db, sub: AppSubscriptionRow, subscriber: SubscriberRow, code: string): void {
+export function onAppSubscribed(db: Db, sub: AppSubscriptionRow, subscriber: SubscriberRow, code: string, waitForLanguage = false): void {
   insertNotification(db, {
     delivery_key: `confirm:${sub.id}:${code}`,
     kind: "confirmation",
@@ -402,7 +402,8 @@ export function onAppSubscribed(db: Db, sub: AppSubscriptionRow, subscriber: Sub
     app_subscription_id: sub.id,
     label: "Follow confirmation (city application)",
     body: appConfirmationText(sub.project_id, JSON.parse(sub.snapshot_json) as AppSnapshot, zapUrl(sub.project_id), textLang(subscriber.preferred_language)),
-    due_at: nowIso(),
+    // held for the language poll; released when they pick (see releaseWelcomes), else sent after WELCOME_WAIT_MS
+    due_at: new Date(Date.now() + (waitForLanguage ? WELCOME_WAIT_MS : 0)).toISOString(),
     state: "scheduled",
     is_demo: 0,
   });

@@ -11,6 +11,8 @@ export interface Recipient {
 export interface Transport {
   name: "photon" | "simulator";
   send(to: Recipient, text: string): Promise<{ providerMessageId: string | null }>;
+  /** A tappable poll (iMessage via Photon). Transports without polls leave this out and get the text fallback. */
+  sendPoll?(to: Recipient, title: string, options: string[]): Promise<{ providerMessageId: string | null }>;
 }
 
 /** Simulated phone: outbound messages are stored and shown on /phone. Clearly labelled SIMULATED. */

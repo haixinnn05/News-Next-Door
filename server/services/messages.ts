@@ -57,6 +57,9 @@ interface Pack {
   unsure: string;
   limit: string;
   langMenu: string;
+  /** Title of the tappable iMessage language poll: plain text, no emoji (iMessage dropped the emoji title, and
+   *  Photon's SDK then couldn't match taps to the poll). */
+  langPoll: string;
   langSet: string;
   demo: string;
   /** A sample next step shown only in DEMO updates. */
@@ -96,6 +99,7 @@ const PACKS: Record<TextLang, Pack> = {
     unsure: "🤔 I can't tell that for sure from the official record. Here's where to check:",
     limit: "😅 Whoa, that's a lot of questions this hour! Try again in a bit.",
     langMenu: "🌍 Pick your language. Reply with a number:",
+    langPoll: "Which language should I text you in?",
     langSet: "👍 Got it! I'll text you in English from now on.",
     demo: "🧪 [DEMO – sample, not real] ",
     demoStep: "City Planning Commission public hearing",
@@ -132,6 +136,7 @@ const PACKS: Record<TextLang, Pack> = {
     unsure: "🤔 根据官方记录，我无法确定答案。可以在这里查看：",
     limit: "😅 这一小时问的问题有点多啦！稍后再来吧。",
     langMenu: "🌍 请选择语言，回复数字：",
+    langPoll: "您希望我用哪种语言发短信？",
     langSet: "👍 好的！以后我会用中文给您发短信。",
     demo: "🧪【演示：示例，并非真实消息】",
     demoStep: "城市规划委员会公开听证会",
@@ -168,6 +173,7 @@ const PACKS: Record<TextLang, Pack> = {
     unsure: "🤔 No puedo confirmarlo con el registro oficial. Puedes verlo aquí:",
     limit: "😅 ¡Uf, muchas preguntas en esta hora! Inténtalo un poco más tarde.",
     langMenu: "🌍 Elige tu idioma. Responde con un número:",
+    langPoll: "¿En qué idioma te escribo?",
     langSet: "👍 ¡Listo! Desde ahora te escribiré en español.",
     demo: "🧪 [DEMO – ejemplo, no es real] ",
     demoStep: "audiencia pública de la Comisión de Planificación Urbana",
@@ -204,6 +210,7 @@ const PACKS: Record<TextLang, Pack> = {
     unsure: "🤔 Je ne peux pas l'affirmer d'après le dossier officiel. Vous pouvez vérifier ici :",
     limit: "😅 Ça fait beaucoup de questions cette heure-ci ! Réessayez un peu plus tard.",
     langMenu: "🌍 Choisissez votre langue. Répondez avec un numéro :",
+    langPoll: "Dans quelle langue vous écrire ?",
     langSet: "👍 C'est noté ! Je vous écrirai désormais en français.",
     demo: "🧪 [DÉMO – exemple, pas réel] ",
     demoStep: "audience publique de la Commission d'urbanisme",
@@ -240,6 +247,7 @@ const PACKS: Record<TextLang, Pack> = {
     unsure: "🤔 公式記録からは確かなことが言えません。こちらで確認できます：",
     limit: "😅 この1時間は質問が多すぎるようです！少し時間をおいてどうぞ。",
     langMenu: "🌍 言語を選んで、番号で返信してください：",
+    langPoll: "どの言語で送りましょうか？",
     langSet: "👍 了解です！これからは日本語でお送りします。",
     demo: "🧪【デモ：サンプルで実際のものではありません】",
     demoStep: "都市計画委員会の公聴会",
@@ -276,6 +284,7 @@ const PACKS: Record<TextLang, Pack> = {
     unsure: "🤔 आधिकारिक रिकॉर्ड से मैं यह पक्के तौर पर नहीं बता सकता। यहाँ देखें:",
     limit: "😅 इस घंटे बहुत सारे सवाल हो गए! थोड़ी देर बाद फिर कोशिश करें।",
     langMenu: "🌍 अपनी भाषा चुनें। कोई संख्या भेजें:",
+    langPoll: "मैं किस भाषा में संदेश भेजूँ?",
     langSet: "👍 ठीक है! अब से मैं आपको हिन्दी में संदेश भेजूँगा।",
     demo: "🧪 [डेमो – नमूना, असली नहीं] ",
     demoStep: "सिटी प्लानिंग कमीशन की सार्वजनिक सुनवाई",
@@ -312,6 +321,7 @@ const PACKS: Record<TextLang, Pack> = {
     unsure: "🤔 لا أستطيع التأكد من ذلك من السجل الرسمي. يمكنك التحقق هنا:",
     limit: "😅 أسئلة كثيرة خلال هذه الساعة! حاول مرة أخرى بعد قليل.",
     langMenu: "🌍 اختر لغتك. أرسل رقمًا:",
+    langPoll: "بأي لغة أراسلك؟",
     langSet: "👍 تمّ! سأراسلك بالعربية من الآن فصاعدًا.",
     demo: "🧪 [تجربة – مثال وليس حقيقيًا] ",
     demoStep: "جلسة استماع عامة للجنة تخطيط المدينة",
@@ -348,6 +358,7 @@ const PACKS: Record<TextLang, Pack> = {
     unsure: "🤔 По официальным данным я не могу сказать точно. Проверить можно здесь:",
     limit: "😅 Ого, за этот час много вопросов! Попробуйте чуть позже.",
     langMenu: "🌍 Выберите язык. Ответьте цифрой:",
+    langPoll: "На каком языке вам писать?",
     langSet: "👍 Готово! Теперь я буду писать вам по-русски.",
     demo: "🧪 [ДЕМО – пример, не по-настоящему] ",
     demoStep: "публичные слушания Комиссии по городскому планированию",
@@ -470,6 +481,8 @@ export const helpText = (lang: TextLang) => `${BRAND}: ${pack(lang).help}`;
 export const expiredText = (lang: TextLang) => `${BRAND}: ${pack(lang).expired}`;
 export const limitText = (lang: TextLang) => `${BRAND}: ${pack(lang).limit}`;
 export const unsureText = (lang: TextLang, links: string[]) => `${pack(lang).unsure}\n${links.join("\n")}`;
+/** The tappable language poll: title in the resident's current language, options in each language's own name. */
+export const languagePoll = (lang: TextLang) => ({ title: pack(lang).langPoll, options: TEXT_LANGS.map((l) => LANG_NAMES[l]) });
 export const langSetText = (lang: TextLang) => `${BRAND}: ${pack(lang).langSet}`;
 export const langMenuText = (lang: TextLang) =>
   [`${BRAND}: ${pack(lang).langMenu}`, ...TEXT_LANGS.map((l, i) => `${i + 1}. ${LANG_NAMES[l]}`)].join("\n");

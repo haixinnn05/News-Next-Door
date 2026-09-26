@@ -4,9 +4,10 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { all, openMemoryDb } from "./db.ts";
+import { all, openMemoryDb, run } from "./db.ts";
 import { answerProblem, respondToInbound } from "./services/assistant.ts";
-import type { NotificationRow } from "./services/notifications.ts";
+import { runDueNotifications, type NotificationRow } from "./services/notifications.ts";
+import { setPhotonTransport } from "./services/transport.ts";
 import { queueAppDemoUpdate } from "./services/appBriefings.ts";
 import { createAppFollowCode, handleInbound } from "./services/subscriptions.ts";
 import type { ZapApplication } from "./services/zap.ts";
@@ -74,8 +75,11 @@ test("residents pick their text language: from the page they follow, or by texti
   // a language picked by text sticks when they follow something else from an English page
   text(db, createAppFollowCode(db, { ...app, id: "2025Q0316" }, "en").code);
   assert.match(all<NotificationRow>(db, "SELECT * FROM notifications WHERE kind='confirmation'").at(-1)!.body, /Vous suivez maintenant/);
-  // a bare number is only a language choice right after the menu... here it's a question
-  assert.equal(text(db, "7").r.action, "question");
+  // that follow showed the language menu again, so a bare number right after it is a choice…
+  assert.equal(text(db, "7").r.action, "language_set");
+  assert.match(replies(db).at(-1)!.body, /بالعربية/);
+  // …but once they've chosen, a bare number is just a question
+  assert.equal(text(db, "5").r.action, "question");
 });
 
 test("a question is answered from the followed record, with the page link", async () => {
@@ -147,4 +151,48 @@ test("a DEMO update looks like a real one and says it's only a demo", () => {
   assert.match(body, /^🧪 \[DEMO – sample, not real\] 📢 News on/);
   assert.match(body, /• New step: City Planning Commission public hearing/);
   assert.match(body, /Just a demo: nothing has really changed yet/);
+});
+
+test("a new follow sends only the language poll; the welcome follows in the language they tap", async () => {
+  const db = openMemoryDb();
+  const sent: string[] = [];
+  const polls: { title: string; options: string[] }[] = [];
+  setPhotonTransport({
+    name: "photon",
+    send: async (_to, body) => (sent.push(body), { providerMessageId: `t${sent.length}` }),
+    sendPoll: async (_to, title, options) => (polls.push({ title, options }), sent.push(`[poll] ${title}`), { providerMessageId: "p1" }),
+  });
+  const deliverAll = async () => {
+    run(db, "UPDATE subscribers SET transport='photon'"); // the test's texts arrive via the simulator
+    await runDueNotifications(db);
+  };
+
+  text(db, createAppFollowCode(db, app, "en").code);
+  await deliverAll();
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0], "🌍 Which language should I text you in? 👇");
+  assert.match(sent[1], /^\[poll\] Which language should I text you in\?$/);
+  assert.deepEqual(polls[0].options, ["English", "中文", "Español", "Français", "日本語", "हिन्दी", "العربية", "Русский"]);
+
+  // tapping "Español" in the poll arrives as that option's title: the welcome goes out in Spanish
+  assert.equal(text(db, "Español").r.action, "language_set");
+  await deliverAll();
+  assert.equal(sent.length, 3);
+  assert.match(sent[2], /Ahora sigues:/);
+
+  // the next follow asks again (the same code twice doesn't)
+  const second = createAppFollowCode(db, { ...app, id: "2025Q0316" }, "en").code;
+  text(db, second);
+  text(db, second);
+  assert.equal(all(db, "SELECT 1 FROM notifications WHERE kind='language_poll'").length, 2);
+
+  // nobody picks: after the wait, the welcome goes out anyway, in their current language
+  run(db, "UPDATE notifications SET due_at=? WHERE kind='confirmation' AND state='scheduled'", new Date(Date.now() - 1000).toISOString());
+  await deliverAll();
+  assert.match(sent.at(-1)!, /Ahora sigues:/);
+
+  // changing language later, with no welcome waiting, gets a short confirmation
+  text(db, "English");
+  await deliverAll();
+  assert.match(sent.at(-1)!, /I'll text you in English from now on/);
 });

@@ -93,10 +93,17 @@ test("follow → confirm → reminder scheduled; repeat is harmless; STOP cancel
   const hearing = getEvents(db, proposal.id)[0];
   assert.equal(Date.parse(reminder.due_at), Date.parse(hearing.starts_at!) - 24 * 3600_000);
 
+  // first only the language picker (a tappable poll on iMessage, the numbered menu here)…
+  await runDueNotifications(db);
+  assert.equal(get<NotificationRow>(db, "SELECT * FROM notifications WHERE kind='confirmation'")!.state, "scheduled");
+  // …then, once they pick, the welcome in that language
+  handleInbound(db, { providerEventId: "m2b", handle: "+15550001111", spaceId: null, text: "1", transport: "simulator" });
   await runDueNotifications(db);
   assert.equal(get<NotificationRow>(db, "SELECT * FROM notifications WHERE kind='confirmation'")!.state, "sent");
   const sim = all<{ text: string }>(db, "SELECT text FROM sim_messages WHERE direction='to_phone'");
-  assert.ok(sim[0].text.includes("You're now following") && sim[0].text.includes("https://www.nyc.gov/doc"));
+  assert.equal(sim.length, 2);
+  assert.match(sim[0].text, /Pick your language/);
+  assert.ok(sim[1].text.includes("You're now following") && sim[1].text.includes("https://www.nyc.gov/doc"));
 
   handleInbound(db, { providerEventId: "m3", handle: "+15550001111", spaceId: null, text: "STOP", transport: "simulator" });
   assert.equal(get<NotificationRow>(db, "SELECT * FROM notifications WHERE kind='reminder'")!.state, "cancelled");
