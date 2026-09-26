@@ -586,6 +586,8 @@ a.adm-cell-title:hover { text-decoration: underline; }
 .adm-modal .m-head { padding: 18px 18px 0 22px; }
 .adm-modal-title { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
 .adm-modal-body { padding: 12px 22px 22px; }
+.adm-steps { margin: 0 0 14px; padding-left: 20px; line-height: 1.6; }
+.textarea.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
 
 /* subscribers */
 .adm-follow-list { display: flex; flex-wrap: wrap; gap: 4px; }

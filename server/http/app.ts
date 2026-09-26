@@ -10,7 +10,7 @@ import { HttpError, newId, nowIso, nycToUtcIso } from "../lib/util.ts";
 import { myProposals, setSaved } from "../services/account.ts";
 import * as audio from "../services/audio.ts";
 import { fetchRemote, getDocument, getPages, importDocument, type DocumentRow } from "../services/documents.ts";
-import { extractDocument, getDraft, listDrafts, saveDraft, CATEGORIES, EVENT_TYPES, STAGE_KINDS, type DraftRow } from "../services/extraction.ts";
+import { extractDocument, extractionPrompt, importPastedExtraction, getDraft, listDrafts, saveDraft, CATEGORIES, EVENT_TYPES, STAGE_KINDS, type DraftRow } from "../services/extraction.ts";
 import { translateCardToChinese } from "../services/grok.ts";
 import { queueTestMessage, reconcileReminders, runDueNotifications, type NotificationRow, type SubscriberRow } from "../services/notifications.ts";
 import { coverage, getProposal, listPublished, proposalCard, proposalDetail, publishDraft, search, type ProposalRow } from "../services/proposals.ts";
@@ -249,6 +249,12 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
     run(db, "DELETE FROM drafts WHERE document_id=? AND status='failed'", id);
     return c.json(await extractDocument(db, id));
   });
+  // Manual Grok route: copy this prompt into Grok in Cursor, then paste the reply back.
+  admin.get("/documents/:id/grok-prompt", (c) => c.json({ prompt: extractionPrompt(db, c.req.param("id")) }));
+  admin.post("/documents/:id/grok-paste", async (c) => {
+    const { json, model } = (await c.req.json()) as { json: string; model?: string };
+    return c.json(importPastedExtraction(db, c.req.param("id"), String(json ?? ""), model ?? null));
+  });
 
   const draftView = (d: DraftRow) => {
     const doc = getDocument(db, d.document_id)!;
@@ -354,6 +360,12 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
     const { method } = (await c.req.json().catch(() => ({}))) as { method?: string };
     if (method === "tts_translated") await audio.generateChineseFallback(db, c.req.param("id"));
     else await audio.startChineseDub(db, c.req.param("id"));
+    return c.json({ ok: true });
+  });
+  admin.get("/audio/:id/zh-grok-prompt", (c) => c.json({ prompt: audio.chineseCursorPrompt(db, c.req.param("id")) }));
+  admin.post("/audio/:id/zh-grok-paste", async (c) => {
+    const { json } = (await c.req.json()) as { json: string };
+    await audio.generateChineseFromPasted(db, c.req.param("id"), String(json ?? ""));
     return c.json({ ok: true });
   });
   admin.post("/audio/:id/zh-reset", (c) => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { adminJson, adminRequest } from "../lib/api";
 import { fmtRelative } from "../lib/format";
 import { Icon } from "../components/Icon";
+import { CursorGrokModal } from "./CursorGrok";
 import type { AudioItem, AudioSide, Overview } from "./types";
 import { AudioPill, Empty, ErrorBanner, PageHead, SkeletonRows, Spinner, useAction, useAdmin, useInterval, useLoad } from "./ui";
 
@@ -9,6 +10,7 @@ const METHOD_LABEL: Record<string, string> = {
   tts: "ElevenLabs text-to-speech",
   dubbing: "ElevenLabs Dubbing",
   tts_translated: "Grok translation + ElevenLabs voice",
+  tts_translated_cursor: "Grok (in Cursor) translation + ElevenLabs voice",
 };
 
 const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
@@ -64,7 +66,7 @@ export function AudioPage() {
       ) : (
         <div className="adm-audio-list">
           {list.data?.map((item) => (
-            <AudioCard key={`${item.proposal.id}:${item.proposal.version}`} item={item} xiEnabled={xi?.enabled ?? true} reload={list.reload} />
+            <AudioCard key={`${item.proposal.id}:${item.proposal.version}`} item={item} xiEnabled={xi?.enabled ?? true} grokEnabled={overview.data?.integrations.grok.enabled ?? true} reload={list.reload} />
           ))}
         </div>
       )}
@@ -72,11 +74,12 @@ export function AudioPage() {
   );
 }
 
-function AudioCard({ item, xiEnabled, reload }: { item: AudioItem; xiEnabled: boolean; reload: () => Promise<void> }) {
+function AudioCard({ item, xiEnabled, grokEnabled, reload }: { item: AudioItem; xiEnabled: boolean; grokEnabled: boolean; reload: () => Promise<void> }) {
   const { toast } = useAdmin();
   const act = useAction();
   const { proposal, en, zh } = item;
   const [script, setScript] = useState(en.script ?? "");
+  const [pasting, setPasting] = useState(false);
   useEffect(() => setScript(en.script ?? ""), [en.script]);
 
   const locked = en.status === "ready" || en.status === "pending";
@@ -192,9 +195,34 @@ function AudioCard({ item, xiEnabled, reload }: { item: AudioItem; xiEnabled: bo
             {zh?.translation_review === "reviewed" && <span className="pill green">Translation reviewed</span>}
             {zh?.translation_review === "unreviewed" && <span className="pill amber">Unreviewed translation</span>}
           </div>
-          <ChineseSide zh={zh} enReady={en.status === "ready"} xiEnabled={xiEnabled} busy={act.busy} genZh={genZh} review={review} resetZh={resetZh} />
+          <ChineseSide
+            zh={zh}
+            enReady={en.status === "ready"}
+            scriptApproved={en.script_approved}
+            xiEnabled={xiEnabled}
+            grokEnabled={grokEnabled}
+            busy={act.busy}
+            genZh={genZh}
+            openCursor={() => setPasting(true)}
+            review={review}
+            resetZh={resetZh}
+          />
         </section>
       </div>
+      {pasting && (
+        <CursorGrokModal
+          title={`Chinese via Grok in Cursor: ${proposal.title}`}
+          promptPath={`${base}/zh-grok-prompt`}
+          pastePath={`${base}/zh-grok-paste`}
+          submitLabel="Save text and generate Chinese audio"
+          onClose={() => setPasting(false)}
+          onDone={() => {
+            toast("Chinese card text saved and audio generated.");
+            setPasting(false);
+            void reload();
+          }}
+        />
+      )}
     </article>
   );
 }
@@ -202,17 +230,23 @@ function AudioCard({ item, xiEnabled, reload }: { item: AudioItem; xiEnabled: bo
 function ChineseSide({
   zh,
   enReady,
+  scriptApproved,
   xiEnabled,
+  grokEnabled,
   busy,
   genZh,
+  openCursor,
   review,
   resetZh,
 }: {
   zh: AudioSide | null;
   enReady: boolean;
+  scriptApproved: boolean;
   xiEnabled: boolean;
+  grokEnabled: boolean;
   busy: string | null;
   genZh: (m: "dubbing" | "tts_translated") => Promise<void>;
+  openCursor: () => void;
   review: (r: boolean) => Promise<void>;
   resetZh: () => void;
 }) {
@@ -226,8 +260,18 @@ function ChineseSide({
           <button className="btn sm primary" disabled={!canStart || !!busy} onClick={() => void genZh("dubbing")}>
             {busy === "gen-zh:dubbing" || status === "pending" ? <Spinner /> : <Icon name="globe" size={14} />} Dub to Chinese (ElevenLabs Dubbing)
           </button>
-          <button className="btn sm" disabled={!canStart || !!busy} onClick={() => void genZh("tts_translated")} title="Translate the approved English script with Grok, then read it with an ElevenLabs voice">
-            {busy === "gen-zh:tts_translated" && <Spinner />} Fallback: Grok translation + ElevenLabs voice
+          {grokEnabled && (
+            <button className="btn sm" disabled={!canStart || !!busy} onClick={() => void genZh("tts_translated")} title="Translate the approved English script with Grok, then read it with an ElevenLabs voice">
+              {busy === "gen-zh:tts_translated" && <Spinner />} Fallback: Grok translation + ElevenLabs voice
+            </button>
+          )}
+          <button
+            className="btn sm"
+            disabled={!scriptApproved || !xiEnabled || status === "pending" || !!busy}
+            onClick={openCursor}
+            title="Translate with Grok in Cursor chat, paste the reply, then read it with an ElevenLabs voice"
+          >
+            <Icon name="sparkle" size={14} /> Grok via Cursor + ElevenLabs voice
           </button>
         </div>
       )}

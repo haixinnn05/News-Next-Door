@@ -7,7 +7,7 @@ import { get, run, all, openMemoryDb, type Db } from "./db.ts";
 import { excerptAppearsIn } from "./lib/text.ts";
 import { nycToUtcIso } from "./lib/util.ts";
 import { importDocument, getPages } from "./services/documents.ts";
-import { validateDraft, type DraftData } from "./services/extraction.ts";
+import { extractionPrompt, importPastedExtraction, validateDraft, type DraftData } from "./services/extraction.ts";
 import { publishDraft, getEvents, search } from "./services/proposals.ts";
 import { createFollowCode, followStatus, handleInbound } from "./services/subscriptions.ts";
 import { recoverInFlight, runDueNotifications, type NotificationRow } from "./services/notifications.ts";
@@ -159,4 +159,31 @@ test("unknown addresses are reported as unsupported, not matched to unrelated re
   assert.equal(search(db, "123 Fake Street").status, "unsupported_address");
   assert.equal(search(db, "50-02 Queens Boulevard").status, "ok");
   assert.equal(search(db, "45-40 Vernon Blvd").status, "no_proposals_at_address");
+});
+
+test("Grok via Cursor: a pasted reply gets the same schema and source checks, and never overwrites a published draft", async () => {
+  const db = openMemoryDb();
+  const { document, data } = await setup(db);
+  run(db, "DELETE FROM drafts WHERE document_id=?", document.id);
+  assert.match(extractionPrompt(db, document.id), /UNTRUSTED DATA[\s\S]*Public hearing on/);
+
+  const { address_key: _k, ...proposal } = data;
+  const reply = "Here you go:\n```json\n" + JSON.stringify({ proposals: [proposal] }) + "\n```";
+  const r = importPastedExtraction(db, document.id, reply, "grok-4 in Cursor");
+  assert.equal(r.draftIds.length, 1);
+  const row = get<{ extractor: string; issues_json: string }>(db, "SELECT extractor, issues_json FROM drafts WHERE id=?", r.draftIds[0])!;
+  assert.equal(row.extractor, "grok_cursor");
+  assert.equal(JSON.parse(row.issues_json).filter((i: { level: string }) => i.level === "error").length, 0);
+
+  const invented = { ...proposal, evidence: proposal.evidence.map((e) => (e.field === "location" ? { ...e, excerpt: "Location: somewhere invented" } : e)) };
+  const r2 = importPastedExtraction(db, document.id, JSON.stringify({ proposals: [invented] }), null);
+  assert.ok(JSON.parse(get<{ issues_json: string }>(db, "SELECT issues_json FROM drafts WHERE id=?", r2.draftIds[0])!.issues_json).some((i: { field: string }) => i.field === "location"));
+
+  assert.throws(() => importPastedExtraction(db, document.id, "not json", null), /isn't valid JSON/);
+  assert.throws(() => importPastedExtraction(db, document.id, JSON.stringify({ proposals: [{ title: "x" }] }), null), /doesn't match the schema/);
+
+  importPastedExtraction(db, document.id, reply, null);
+  run(db, "UPDATE drafts SET status='published' WHERE id=?", r.draftIds[0]);
+  importPastedExtraction(db, document.id, JSON.stringify({ proposals: [invented] }), null);
+  assert.equal(get<{ data_json: string }>(db, "SELECT data_json FROM drafts WHERE id=?", r.draftIds[0])!.data_json.includes("somewhere invented"), false);
 });
