@@ -41,14 +41,7 @@ export function ApplicationPage({ id }: { id: string }) {
     );
   const story = storyFromApp(app, lang);
   const brief = app.brief ? zhCivic(app.brief, lang) : null;
-  return (
-    <>
-      <NewsArticle story={story} glance={glanceOf(app, t, lang)} body={brief} />
-      <div className="news news-actions">
-        <SaveButton proposalId={app.id} />
-      </div>
-    </>
-  );
+  return <NewsArticle story={story} glance={glanceOf(app, t, lang)} body={brief} actions={<SaveButton proposalId={app.id} />} />;
 }
 
 function glanceOf(app: ZapApplication, t: (k: Key) => string, lang: Lang) {

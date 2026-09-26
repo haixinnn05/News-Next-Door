@@ -1,6 +1,7 @@
 import { useLang, type Key } from "../lib/i18n";
 import { storyDate, type Story, type Topic } from "../lib/story";
 import { Link } from "../lib/router";
+import type { ReactNode } from "react";
 
 const TOPIC: Record<Topic, Key> = {
   housing: "housing",
@@ -68,14 +69,17 @@ export function NewsFeed({
   );
 }
 
-export function NewsArticle({ story, glance, body }: { story: Story; glance?: { label: string; value: string | null }[]; body?: string | null }) {
+export function NewsArticle({ story, glance, body, actions }: { story: Story; glance?: { label: string; value: string | null }[]; body?: string | null; actions?: ReactNode }) {
   const { t, lang } = useLang();
   const date = storyDate(story.date, lang);
   return (
     <article className="news news-article">
-      <Link to="/" className="news-back">
-        {t("back")}
-      </Link>
+      <div className="news-top">
+        <Link to="/" className="news-back">
+          {t("back")}
+        </Link>
+        {actions}
+      </div>
       <p className="news-kicker">{t(TOPIC[story.topic])}</p>
       <h1>{story.headline}</h1>
       {date && <p className="news-meta">{date}</p>}
