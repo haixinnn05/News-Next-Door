@@ -22,7 +22,7 @@ export const config = {
   dbPath: resolveFromRoot(env("DB_PATH", path.join(dataDir, "btv.sqlite"))),
   uploadsDir: path.join(dataDir, "documents"),
   audioDir: path.join(dataDir, "audio"),
-  showSampleData: env("SHOW_SAMPLE_DATA", "true") !== "false",
+  showSampleData: env("SHOW_SAMPLE_DATA", "false") !== "false",
   reminderLeadHours: Number(env("REMINDER_LEAD_HOURS", "24")),
   followCodeTtlMinutes: Number(env("FOLLOW_CODE_TTL_MINUTES", "30")),
   workerIntervalMs: Number(env("WORKER_INTERVAL_MS", "5000")),

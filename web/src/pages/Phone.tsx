@@ -88,7 +88,7 @@ export function Phone() {
           <div className="screen">
             <div className="bar">
               <div className="avatar">BV</div>
-              <div style={{ fontSize: 12, fontWeight: 600 }}>Before the Vote</div>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>News Next Door</div>
               <div style={{ fontSize: 10.5, color: "#8e8e93" }}>iMessage · SIMULATED</div>
             </div>
             <div className="msgs">

@@ -8,7 +8,7 @@ if (!config.grok.enabled) {
 }
 const { data, model } = await grokJson<{ ok: boolean; echo: string }>({
   system: "Reply with the requested JSON only.",
-  user: 'Return ok=true and echo="Before the Vote".',
+  user: 'Return ok=true and echo="News Next Door".',
   schemaName: "smoke",
   schema: { type: "object", additionalProperties: false, properties: { ok: { type: "boolean" }, echo: { type: "string" } }, required: ["ok", "echo"] },
 });

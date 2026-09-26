@@ -16,6 +16,6 @@ for await (const [space, message] of app.messages) {
   if (message.direction !== "inbound") continue;
   const text = message.content.type === "text" ? message.content.text : `<${message.content.type}>`;
   console.log(`inbound from ${message.sender?.id} in ${space.id}: ${text}`);
-  const sent = await space.send("Before the Vote: Photon loop OK ✅ (test message)");
+  const sent = await space.send("News Next Door: Photon loop OK ✅ (test message)");
   console.log("reply sent, provider id:", sent?.id);
 }

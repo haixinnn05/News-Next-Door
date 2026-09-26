@@ -343,7 +343,7 @@ function NewMessageModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="field">
             <label htmlFor="nm-text">Message</label>
-            <textarea id="nm-text" className="textarea" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Hello from the Before the Vote team — this is a delivery test." />
+            <textarea id="nm-text" className="textarea" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Hello from the News Next Door team — this is a delivery test." />
             <span className="subtle xs">{text.length} characters</span>
           </div>
           <ErrorBanner error={act.error} />

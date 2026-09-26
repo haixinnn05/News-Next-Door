@@ -31,12 +31,12 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
         <div className="adm-login-brand">
           <BrandMark size={34} />
           <div>
-            <div className="adm-login-name">Before the Vote</div>
+            <div className="adm-login-name">News Next Door</div>
             <div className="subtle xs">Team console</div>
           </div>
         </div>
         <h1>Team sign-in</h1>
-        <p className="muted small">This area is for the Before the Vote team. Enter the admin token to continue.</p>
+        <p className="muted small">This area is for the News Next Door team. Enter the admin token to continue.</p>
         <div className="field">
           <label htmlFor="adm-token">Admin token</label>
           <input id="adm-token" className="input" type="password" autoFocus autoComplete="current-password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="••••••••••••" />

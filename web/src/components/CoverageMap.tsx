@@ -13,9 +13,9 @@ const OUTLINE: [number, number][] = [
   [40.7266, -73.935], [40.7315, -73.948], [40.7385, -73.957], [40.747, -73.9612], [40.754, -73.959],
 ];
 
-const pinSvg = (active: boolean, color = "#1b3a2b") => {
-  const fill = color === "#1b3a2b" ? (active ? "#24503a" : "#1b3a2b") : active ? "#1e3a8a" : color;
-  return `<svg class="pin" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg"><path d="M15 37s12-11.2 12-21A12 12 0 0 0 3 16c0 9.8 12 21 12 21Z" fill="${fill}" stroke="#fff" stroke-width="2"/><circle cx="15" cy="15.5" r="4.6" fill="#fff"/></svg>`;
+const pinSvg = (active: boolean) => {
+  const fill = active ? "#111" : "#e10600";
+  return `<svg class="pin" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg"><path d="M15 37s12-11.2 12-21A12 12 0 0 0 3 16c0 9.8 12 21 12 21Z" fill="${fill}" stroke="#111" stroke-width="2"/><circle cx="15" cy="15.5" r="4.6" fill="#fff"/></svg>`;
 };
 
 export interface MapPlace {
@@ -36,17 +36,28 @@ export function CoverageMap({ proposals, places = [], hovered, onHover }: { prop
 
   useEffect(() => {
     if (!el.current || map.current) return;
-    const m = L.map(el.current, { zoomControl: false, attributionControl: false, scrollWheelZoom: false }).setView([40.7425, -73.925], 14);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(m);
-    L.polygon(OUTLINE, { color: "#1b3a2b", weight: 2, opacity: 0.7, fillColor: "#4d7a3a", fillOpacity: 0.08, dashArray: "6 5" }).addTo(m);
+    const area = L.latLngBounds(OUTLINE);
+    const m = L.map(el.current, {
+      zoomControl: false,
+      attributionControl: false,
+      scrollWheelZoom: false,
+      maxBounds: area.pad(1.4),
+      maxBoundsViscosity: 0.8,
+    });
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 16,
+      className: "map-tiles",
+    }).addTo(m);
+    m.fitBounds(area.pad(0.45));
+    L.polygon(OUTLINE, { color: "#111", weight: 2.5, opacity: 1, fillColor: "#e10600", fillOpacity: 0.12 }).addTo(m);
     const labels: [string, number, number][] = [
-      ["LONG ISLAND CITY", 40.7465, -73.9465],
-      ["SUNNYSIDE", 40.7425, -73.924],
-      ["WOODSIDE", 40.7455, -73.9055],
-      ["MASPETH", 40.7275, -73.908],
+      ["LONG ISLAND CITY", 40.751, -73.951],
+      ["SUNNYSIDE", 40.7388, -73.928],
+      ["WOODSIDE", 40.7488, -73.899],
+      ["MASPETH", 40.7265, -73.905],
     ];
     for (const [name, lat, lng] of labels)
-      L.marker([lat, lng], { interactive: false, icon: L.divIcon({ className: "", html: `<div style="font:600 10px Inter,sans-serif;letter-spacing:.14em;color:#5d5f58;white-space:nowrap;transform:translate(-50%,-50%)">${name}</div>` }) }).addTo(m);
+      L.marker([lat, lng], { interactive: false, icon: L.divIcon({ className: "", html: `<div style="font:600 11px Inter,sans-serif;letter-spacing:.12em;color:#111;white-space:nowrap;transform:translate(-50%,-50%)">${name}</div>` }) }).addTo(m);
     layer.current = L.layerGroup().addTo(m);
     map.current = m;
     return () => {
@@ -61,13 +72,11 @@ export function CoverageMap({ proposals, places = [], hovered, onHover }: { prop
     if (!m || !g) return;
     g.clearLayers();
     markers.current.clear();
-    const pts: L.LatLngExpression[] = [];
-    const add = (id: string, lat: number, lng: number, title: string, color: string | undefined, onClick: () => void) => {
+    const add = (id: string, lat: number, lng: number, title: string, onClick: () => void) => {
       const mk = L.marker([lat, lng], {
-        icon: L.divIcon({ className: "", html: pinSvg(false, color), iconSize: [30, 38], iconAnchor: [15, 37] }),
+        icon: L.divIcon({ className: "", html: pinSvg(false), iconSize: [30, 38], iconAnchor: [15, 37] }),
         title,
         riseOnHover: true,
-        zIndexOffset: color ? 400 : 0,
       })
         .bindTooltip(title, { direction: "top", offset: [0, -36], className: "pin-tip" })
         .on("click", onClick)
@@ -75,41 +84,36 @@ export function CoverageMap({ proposals, places = [], hovered, onHover }: { prop
         .on("mouseout", () => onHover(null));
       mk.addTo(g);
       markers.current.set(id, mk);
-      pts.push([lat, lng]);
     };
     for (const p of proposals) {
       if (!p.address) continue;
-      add(p.id, p.address.lat, p.address.lng, titleOf(p, lang), undefined, () => navigate(`/p/${p.id}`));
+      add(p.id, p.address.lat, p.address.lng, titleOf(p, lang), () => navigate(`/p/${p.id}`));
     }
     for (const place of places) {
-      add(place.id, place.lat, place.lng, place.title, "#2d3f82", () => window.open(place.url, "_blank", "noopener,noreferrer"));
+      add(place.id, place.lat, place.lng, place.title, () => {
+        if (place.url.startsWith("/")) navigate(place.url);
+        else window.open(place.url, "_blank", "noopener,noreferrer");
+      });
     }
-    if (pts.length === 1) m.setView(pts[0], 15);
-    else if (pts.length > 1) m.fitBounds(L.latLngBounds(pts).pad(0.35), { maxZoom: 15 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proposals, places, lang]);
 
   useEffect(() => {
-    const live = new Set(places.map((p) => p.id));
     for (const [id, mk] of markers.current) {
       const on = id === hovered;
-      mk.setIcon(L.divIcon({ className: "", html: pinSvg(on, live.has(id) ? "#2d3f82" : undefined), iconSize: on ? [36, 46] : [30, 38], iconAnchor: on ? [18, 45] : [15, 37] }));
+      mk.setIcon(L.divIcon({ className: "", html: pinSvg(on), iconSize: on ? [36, 46] : [30, 38], iconAnchor: on ? [18, 45] : [15, 37] }));
       if (on) mk.openTooltip();
       else mk.closeTooltip();
     }
-  }, [hovered, places]);
+  }, [hovered]);
 
   return (
     <div className="map-wrap">
       <div ref={el} style={{ width: "100%", height: "100%" }} aria-label="Map of Queens Community Board 2 showing proposal locations" role="region" />
       <div className="map-legend">
         <span className="dot" /> {t("coveredArea")}
-        {places.length > 0 && (
-          <>
-            <span className="dot live" /> {t("livePins")}
-          </>
-        )}
       </div>
+      <div className="map-attrib">© Esri</div>
       <div className="map-zoom">
         <button onClick={() => map.current?.zoomIn()} aria-label="Zoom in">
           <Icon name="plus" size={16} />
@@ -117,9 +121,6 @@ export function CoverageMap({ proposals, places = [], hovered, onHover }: { prop
         <button onClick={() => map.current?.zoomOut()} aria-label="Zoom out">
           <Icon name="minus" size={16} />
         </button>
-      </div>
-      <div className="map-attrib">
-        © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors · approx. boundary
       </div>
     </div>
   );

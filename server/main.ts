@@ -29,7 +29,7 @@ if (config.photon.enabled) {
 
 serve({ fetch: createApp(db, { photonEnabled }).fetch, port: config.port });
 
-console.log(`Before the Vote API on http://localhost:${config.port}`);
+console.log(`News Next Door API on http://localhost:${config.port}`);
 console.log(`  grok       : ${config.grok.enabled ? `on (${config.grok.model})` : "OFF — imports create blank drafts for manual entry"}`);
 console.log(`  elevenlabs : ${config.elevenlabs.enabled ? "on" : "OFF — audio generation disabled"}`);
 console.log(`  photon     : ${photonEnabled ? `on (line ${config.photon.lineAddress || "address not set"})` : "OFF — using the SIMULATED phone at /phone"}`);

@@ -6,6 +6,9 @@ const TZ = "America/New_York";
 export function fmtDate(date: string, lang: Lang = "en"): string {
   return new Intl.DateTimeFormat(lang === "zh" ? "zh-CN" : "en-US", { timeZone: "UTC", month: lang === "zh" ? "long" : "short", day: "numeric", year: "numeric" }).format(new Date(`${date}T12:00:00Z`));
 }
+export function fmtDateLong(date: string, lang: Lang = "en"): string {
+  return new Intl.DateTimeFormat(lang === "zh" ? "zh-CN" : "en-US", { timeZone: "UTC", month: "long", day: "numeric", year: "numeric" }).format(new Date(`${date}T12:00:00Z`));
+}
 export function fmtTime(iso: string, lang: Lang = "en"): string {
   return new Intl.DateTimeFormat(lang === "zh" ? "zh-CN" : "en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 }

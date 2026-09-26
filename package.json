@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Before the Vote: plain-language, multilingual, source-backed explanations of Queens CB2 proposals with iMessage updates.",
+  "description": "News Next Door: plain-language, multilingual, source-backed explanations of Queens CB2 proposals with iMessage updates.",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:server": "tsx watch server/main.ts",

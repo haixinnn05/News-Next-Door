@@ -1,12 +1,11 @@
 import { lazy, Suspense } from "react";
-import { Footer, Header } from "./components/Header";
+import { Footer, SideNav } from "./components/Header";
 import { ToastProvider } from "./components/Toast";
 import { LangProvider } from "./lib/i18n";
 import { MetaProvider } from "./lib/meta";
 import { match, RouterProvider, useRouter } from "./lib/router";
 import { Discover } from "./pages/Discover";
-import { Home } from "./pages/Home";
-import { About, HowItWorks } from "./pages/Info";
+import { ApplicationPage } from "./pages/Application";
 import { Phone } from "./pages/Phone";
 import { ProposalPage } from "./pages/Proposal";
 
@@ -22,12 +21,11 @@ function Routes() {
     );
   let page;
   const p = match("/p/:id/:tab?", path);
-  if (path === "/") page = <Home />;
-  else if (path === "/discover") page = <Discover />;
+  const a = match("/a/:id", path);
+  if (path === "/" || path === "/discover") page = <Discover />;
+  else if (a) page = <ApplicationPage key={a.id} id={a.id} />;
   else if (p) page = <ProposalPage key={p.id} id={p.id} tab={p.tab} />;
   else if (path === "/phone") page = <Phone />;
-  else if (path === "/about") page = <About />;
-  else if (path === "/how-it-works") page = <HowItWorks />;
   else
     page = (
       <div className="container page">
@@ -37,11 +35,13 @@ function Routes() {
       </div>
     );
   return (
-    <>
-      <Header />
-      <main>{page}</main>
-      <Footer />
-    </>
+    <div className="public app-shell">
+      <SideNav />
+      <div className="app-main">
+        <main>{page}</main>
+        <Footer />
+      </div>
+    </div>
   );
 }
 

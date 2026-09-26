@@ -8,8 +8,8 @@ export function About() {
   if (lang === "zh")
     return (
       <div className="container page prose">
-        <h1>关于 Before the Vote</h1>
-        <p>社区委员会的文件通常很长、很专业，而且只有英文。Before the Vote 把皇后区第二社区委员会（长岛市、阳光园、伍德赛德、马斯佩斯）的官方文件，整理成通俗易懂的提案卡片、英文和中文语音简报，以及 iMessage 提醒。</p>
+        <h1>关于 News Next Door</h1>
+        <p>社区委员会的文件通常很长、很专业，而且只有英文。News Next Door 把皇后区第二社区委员会（长岛市、阳光园、伍德赛德、马斯佩斯）的官方文件，整理成通俗易懂的提案卡片、英文和中文语音简报，以及 iMessage 提醒。</p>
         <h2>我们的原则</h2>
         <ul>
           <li>每项事实都链接到原始文件的具体页面；来源中未列出的信息会标注“来源中未列出”。</li>
@@ -22,9 +22,9 @@ export function About() {
     );
   return (
     <div className="container page prose">
-      <h1>About Before the Vote</h1>
+      <h1>About News Next Door</h1>
       <p>
-        Community board documents are long, technical, and usually English-only. Before the Vote turns official documents from {meta?.board.name ?? "Queens Community Board 2"} (Long Island City, Sunnyside, Woodside, Maspeth) into plain-language proposal cards, short English and Chinese audio briefings, and iMessage reminders, so residents can take part before decisions are made.
+        Community board documents are long, technical, and usually English-only. News Next Door turns official documents from {meta?.board.name ?? "Queens Community Board 2"} (Long Island City, Sunnyside, Woodside, Maspeth) into plain-language proposal cards, short English and Chinese audio briefings, and iMessage reminders, so residents can take part before decisions are made.
       </p>
       <h2>Principles</h2>
       <ul>

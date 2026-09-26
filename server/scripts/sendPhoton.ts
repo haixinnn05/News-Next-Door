@@ -19,7 +19,7 @@ if (!to || !/^(\+\d{10,15}|[^@\s]+@[^@\s]+)$/.test(to)) {
 const app = await Spectrum({ projectId: config.photon.projectId, projectSecret: config.photon.projectSecret, providers: [imessage.config()] });
 try {
   const space = await imessage(app).space.create([to]);
-  const sent = await space.send("Before the Vote: Photon outbound test (you can ignore this).");
+  const sent = await space.send("News Next Door: Photon outbound test (you can ignore this).");
   console.log(`sent to ${to} in space ${space.id}, provider id: ${sent?.id ?? "(none)"}`);
 } catch (e) {
   console.error("send failed:", (e as Error).message);

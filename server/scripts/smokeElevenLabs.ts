@@ -11,7 +11,7 @@ ensureDirs();
 const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${config.elevenlabs.voiceId}?output_format=mp3_44100_128`, {
   method: "POST",
   headers: { "xi-api-key": config.elevenlabs.apiKey, "Content-Type": "application/json" },
-  body: JSON.stringify({ text: "Before the Vote. This is a test of the English briefing voice.", model_id: config.elevenlabs.ttsModel }),
+  body: JSON.stringify({ text: "News Next Door. This is a test of the English briefing voice.", model_id: config.elevenlabs.ttsModel }),
 });
 if (!res.ok) {
   console.error(`TTS failed (${res.status}):`, await res.text());

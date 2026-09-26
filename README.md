@@ -1,4 +1,4 @@
-# Before the Vote
+# News Next Door
 
 Plain-language, source-backed explanations of Queens Community Board 2 proposals, with English and Chinese audio briefings and iMessage reminders.
 

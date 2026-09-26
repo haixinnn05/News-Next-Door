@@ -112,6 +112,17 @@ const dict = {
   liveEmpty: ["NYC Planning lists no active Queens CB 2 applications right now.", "纽约市城市规划局目前没有列出皇后区第二社区委员会的进行中申请。"],
   liveSource: ["Source: NYC Open Data, Zoning Application Portal project data. Map pins are the project's tax lots. Text is in English, as published.", "来源：纽约市开放数据，分区申请门户项目数据。地图标记为项目地块。正文为市政府发布的英文。"],
   livePins: ["Live applications", "现行申请"],
+  today: ["Today", "今天"],
+  home: ["Home", "首页"],
+  language: ["Language", "语言"],
+  back: ["Back", "返回"],
+  housing: ["Housing", "住房"],
+  parks: ["Parks", "公园"],
+  buildings: ["Buildings", "建筑"],
+  buses: ["Buses", "公交"],
+  cityRecord: ["City website", "市政府网站"],
+  newsEmpty: ["No news right now.", "现在没有消息。"],
+  notFound: ["This story is not available.", "找不到这条消息。"],
 } as const;
 
 export type Key = keyof typeof dict;

@@ -32,7 +32,7 @@ export function AdminApp() {
 
   useEffect(() => {
     const prev = document.title;
-    document.title = "Team console · Before the Vote";
+    document.title = "Team console · News Next Door";
     return () => {
       document.title = prev;
     };

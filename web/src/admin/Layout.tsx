@@ -22,7 +22,7 @@ export function Layout({ children, onSignOut }: { children: ReactNode; onSignOut
           <span className="adm-brand-mark">
             <BrandMark size={22} />
           </span>
-          <span>Before the Vote</span>
+          <span>News Next Door</span>
         </Link>
         <nav className="adm-nav" aria-label="Team console">
           {NAV.map((n) => (
