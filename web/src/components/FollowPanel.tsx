@@ -69,30 +69,29 @@ export function FollowPanel({ proposalId, title, requestFollow }: { proposalId: 
         <div className="check">
           <Icon name="check" size={26} stroke={2.4} />
         </div>
-        <h3 style={{ margin: "0 0 6px" }}>{t("confirmedTitle")}</h3>
-        <p className="small muted" style={{ margin: 0 }}>
-          “{title}”
-        </p>
-        <p className="small muted">{t("confirmedText")}</p>
+        <h3>{t("confirmedTitle")}</h3>
+        <p>“{title}”</p>
+        <p>{t("confirmedText")}</p>
         {simulator && (
-          <Link to={`/phone?code=${f?.code ?? ""}`} className="btn sm">
-            <Icon name="phone" size={15} /> {t("openSimulator")}
+          <Link to={`/phone?code=${f?.code ?? ""}`} className="news-cta">
+            <Icon name="phone" size={16} /> {t("openSimulator")}
           </Link>
         )}
       </div>
     );
 
   return (
-    <div>
+    <div className="follow-card">
       <div className="follow-intro">
         <div className="imsg-icon">
           <IMessageGlyph />
         </div>
-        <span>{t("followIntro")}</span>
+        <p>{t("followIntro")}</p>
       </div>
       {error && (
-        <div className="banner red" style={{ marginTop: 14 }}>
-          {error}
+        <div className="banner red">
+          <Icon name="alert" size={16} />
+          <span>{error}</span>
         </div>
       )}
       {f ? (
@@ -101,61 +100,54 @@ export function FollowPanel({ proposalId, title, requestFollow }: { proposalId: 
           <div className="code-box">
             <span aria-label="Follow code">{f.code}</span>
             <button
+              type="button"
               onClick={() => {
                 navigator.clipboard?.writeText(f.code);
                 toast(t("copied"));
               }}
               aria-label="Copy code"
             >
-              <Icon name="copy" size={16} />
+              <Icon name="copy" size={18} />
             </button>
           </div>
           {status === "expired" ? (
-            <div className="banner amber" style={{ marginTop: 12 }}>
-              {t("codeExpired")}{" "}
-              <button className="link" style={{ border: 0, background: "none", padding: 0 }} onClick={start}>
-                {t("newCode")}
-              </button>
+            <div className="banner red">
+              <span>
+                {t("codeExpired")}{" "}
+                <button type="button" className="follow-link" onClick={start}>
+                  {t("newCode")}
+                </button>
+              </span>
             </div>
           ) : (
             <>
               {simulator ? (
-                <Link to={`/phone?code=${f.code}`} className="btn primary block" style={{ marginTop: 12 }}>
+                <Link to={`/phone?code=${f.code}`} className="news-cta">
                   <Icon name="phone" size={16} /> {t("openSimulator")}
                 </Link>
               ) : (
-                <a href={f.link} className="btn primary block" style={{ marginTop: 12 }}>
+                <a href={f.link} className="news-cta">
                   <IMessageGlyph size={17} /> {t("openImessage")}
                 </a>
               )}
-              <p className="small muted" style={{ margin: "10px 0 0" }}>
-                {simulator ? (
-                  <>{lang === "zh" ? "iMessage 线路尚未配置：此演示使用模拟手机（SIMULATED）。" : "Photon iMessage isn't configured, so this demo uses a SIMULATED phone."}</>
-                ) : (
-                  <>
-                    {t("sendCodeTo")} <strong>{line ?? "our iMessage line"}</strong>
-                  </>
-                )}
-              </p>
+              {!simulator && (
+                <p className="follow-note">
+                  {t("sendCodeTo")} <strong>{line ?? "our iMessage line"}</strong>
+                </p>
+              )}
               <div className="follow-state">
                 <span className="dot" />
-                <span className="muted">
+                <span>
                   {t("waitingForMessage")} · {t("codeExpires")} {Math.ceil(remaining / 60000)} min
                 </span>
               </div>
             </>
           )}
-          <p className="xs subtle" style={{ marginTop: 12 }}>
-            {t("youllGetConfirm")}
-          </p>
-          {user && (
-            <p className="xs subtle" style={{ marginTop: 6 }}>
-              {t("followLinked")}
-            </p>
-          )}
+          <p className="follow-note">{t("youllGetConfirm")}</p>
+          {user && <p className="follow-note">{t("followLinked")}</p>}
         </>
       ) : (
-        !error && <div className="skeleton" style={{ height: 230, marginTop: 16 }} />
+        !error && <div className="skeleton" style={{ height: 230 }} />
       )}
     </div>
   );
@@ -180,14 +172,14 @@ export function FollowModal({
   }, [onClose]);
   return (
     <div className="modal-back" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={t("followThis")} onClick={(e) => e.stopPropagation()}>
+      <div className="modal auth-modal" role="dialog" aria-modal="true" aria-label={t("followThis")} onClick={(e) => e.stopPropagation()}>
         <div className="m-head">
-          <h3 style={{ margin: 0, fontSize: 16 }}>{t("followThis")}</h3>
-          <button className="btn ghost sm" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={16} />
+          <h3>{t("followThis")}</h3>
+          <button className="auth-close" onClick={onClose} aria-label={t("close")}>
+            <Icon name="x" size={20} />
           </button>
         </div>
-        <div style={{ padding: "14px 22px 22px" }}>
+        <div className="signin-body">
           <FollowPanel proposalId={proposalId} title={title} requestFollow={requestFollow} />
         </div>
       </div>
