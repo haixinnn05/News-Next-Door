@@ -14,7 +14,8 @@
     "seed:reset": "tsx server/scripts/resetDb.ts",
     "smoke:grok": "tsx server/scripts/smokeGrok.ts",
     "smoke:elevenlabs": "tsx server/scripts/smokeElevenLabs.ts",
-    "smoke:photon": "tsx server/scripts/smokePhoton.ts"
+    "smoke:photon": "tsx server/scripts/smokePhoton.ts",
+    "smoke:photon-send": "tsx server/scripts/sendPhoton.ts"
   },
   "engines": {
     "node": ">=23.4"
