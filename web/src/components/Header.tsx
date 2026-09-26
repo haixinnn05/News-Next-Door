@@ -4,7 +4,11 @@ import { Link, useRouter } from "../lib/router";
 export function SideNav() {
   const { t, lang, setLang } = useLang();
   const { path } = useRouter();
-  const home = path === "/" || path.startsWith("/discover") || path.startsWith("/a/") || path.startsWith("/p/");
+  const items = [
+    { to: "/", label: t("home"), on: path === "/" || path.startsWith("/discover") || path.startsWith("/a/") || path.startsWith("/p/") },
+    { to: "/about", label: t("about"), on: path === "/about" },
+    { to: "/how-it-works", label: t("howItWorks"), on: path === "/how-it-works" },
+  ];
   return (
     <aside className="side-nav">
       <Link to="/" className="side-brand">
@@ -12,9 +16,11 @@ export function SideNav() {
         News Next Door
       </Link>
       <nav aria-label="Main">
-        <Link to="/" className={home ? "on" : undefined} aria-current={home ? "page" : undefined}>
-          {t("home")}
-        </Link>
+        {items.map((item) => (
+          <Link key={item.to} to={item.to} className={item.on ? "on" : undefined} aria-current={item.on ? "page" : undefined}>
+            {item.label}
+          </Link>
+        ))}
       </nav>
       <label className="side-lang">
         <span>{t("language")}</span>

@@ -68,7 +68,7 @@ export function NewsFeed({
   );
 }
 
-export function NewsArticle({ story }: { story: Story }) {
+export function NewsArticle({ story, glance }: { story: Story; glance?: { label: string; value: string | null }[] }) {
   const { t, lang } = useLang();
   const date = storyDate(story.date, lang);
   return (
@@ -80,6 +80,19 @@ export function NewsArticle({ story }: { story: Story }) {
       <h1>{story.headline}</h1>
       {date && <p className="news-meta">{date}</p>}
       {story.location && <p className="news-place">{story.location}</p>}
+      {glance && glance.length > 0 && (
+        <aside className="news-glance">
+          <h2>{t("atAGlance")}</h2>
+          <dl>
+            {glance.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd className={row.value ? undefined : "unknown"}>{row.value || t("notListed")}</dd>
+              </div>
+            ))}
+          </dl>
+        </aside>
+      )}
       {story.sourceUrl && (
         <a className="news-source" href={story.sourceUrl} target="_blank" rel="noreferrer">
           {t("cityRecord")}

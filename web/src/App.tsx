@@ -6,6 +6,7 @@ import { MetaProvider } from "./lib/meta";
 import { match, RouterProvider, useRouter } from "./lib/router";
 import { Discover } from "./pages/Discover";
 import { ApplicationPage } from "./pages/Application";
+import { About, HowItWorks } from "./pages/Info";
 import { Phone } from "./pages/Phone";
 import { ProposalPage } from "./pages/Proposal";
 
@@ -26,6 +27,8 @@ function Routes() {
   else if (a) page = <ApplicationPage key={a.id} id={a.id} />;
   else if (p) page = <ProposalPage key={p.id} id={p.id} tab={p.tab} />;
   else if (path === "/phone") page = <Phone />;
+  else if (path === "/about") page = <About />;
+  else if (path === "/how-it-works") page = <HowItWorks />;
   else
     page = (
       <div className="container page">
