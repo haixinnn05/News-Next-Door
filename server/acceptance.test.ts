@@ -96,7 +96,7 @@ test("follow → confirm → reminder scheduled; repeat is harmless; STOP cancel
   await runDueNotifications(db);
   assert.equal(get<NotificationRow>(db, "SELECT * FROM notifications WHERE kind='confirmation'")!.state, "sent");
   const sim = all<{ text: string }>(db, "SELECT text FROM sim_messages WHERE direction='to_phone'");
-  assert.ok(sim[0].text.includes("You're following") && sim[0].text.includes("https://www.nyc.gov/doc"));
+  assert.ok(sim[0].text.includes("You're now following") && sim[0].text.includes("https://www.nyc.gov/doc"));
 
   handleInbound(db, { providerEventId: "m3", handle: "+15550001111", spaceId: null, text: "STOP", transport: "simulator" });
   assert.equal(get<NotificationRow>(db, "SELECT * FROM notifications WHERE kind='reminder'")!.state, "cancelled");

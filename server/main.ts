@@ -5,6 +5,7 @@ import { openDb } from "./db.ts";
 import { createApp } from "./http/app.ts";
 import { seedIfEmpty } from "./seed/seed.ts";
 import { checkAppUpdates, pollAppAudio } from "./services/appBriefings.ts";
+import { assistantMode } from "./services/assistant.ts";
 import { pollDubs } from "./services/audio.ts";
 import { recoverInFlight, runDueNotifications } from "./services/notifications.ts";
 
@@ -38,6 +39,7 @@ console.log(`News Next Door API on http://localhost:${config.port}`);
 console.log(`  grok       : ${config.grok.enabled ? `on (${config.grok.model})` : "OFF — imports create blank drafts for manual entry"}`);
 console.log(`  elevenlabs : ${config.elevenlabs.enabled ? "on" : "OFF — audio generation disabled"}`);
 console.log(`  photon     : ${photonEnabled ? `on (line ${config.photon.lineAddress || "address not set"})` : "OFF — using the SIMULATED phone at /phone"}`);
+console.log(`  assistant  : ${assistantMode() ?? "OFF — texted questions get a link to the page (set XAI_API_KEY or GROK_VIA_CURSOR_CLI=true)"}`);
 console.log(`  public url : ${config.publicBaseUrl}`);
 console.log(`  sign-in    : email/password${config.auth.googleEnabled ? " + Google" : " (set GOOGLE_CLIENT_ID/SECRET to add Google)"}`);
 console.log(`  team login : ${config.auth.googleEnabled ? `Google (${config.auth.adminEmails.length} allowed email${config.auth.adminEmails.length === 1 ? "" : "s"})` : "ADMIN_TOKEN (Google sign-in not configured)"}`);

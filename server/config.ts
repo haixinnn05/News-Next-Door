@@ -46,6 +46,12 @@ export const config = {
     get enabled() {
       return this.apiKey.length > 0;
     },
+    /**
+     * Fallback for answering texted questions when the Grok API isn't available: run Grok through the
+     * Cursor CLI (`agent`) signed in on this machine. Off unless GROK_VIA_CURSOR_CLI=true.
+     */
+    cursorCli: env("GROK_VIA_CURSOR_CLI") === "true",
+    cursorModel: env("GROK_CURSOR_MODEL", "grok-4.7-low-fast"),
   },
   elevenlabs: {
     apiKey: env("ELEVENLABS_API_KEY"),

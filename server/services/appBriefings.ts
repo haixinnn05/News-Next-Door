@@ -12,11 +12,12 @@ import { z } from "zod";
 import { config } from "../config.ts";
 import { all, get, run, type Db } from "../db.ts";
 import { formatDateOnly, HttpError, newId, nowIso } from "../lib/util.ts";
+import { headlineOfApp } from "../../web/src/lib/story.ts";
 import { zhCivic, zhTranslated } from "../../web/src/lib/zhCivic.ts";
 import { saveFile, tts } from "./audio.ts";
 import { parseJsonReply } from "./extraction.ts";
 import { grokJson } from "./grok.ts";
-import { appChanges, appConfirmationText, appUpdateText, type AppSnapshot } from "./messages.ts";
+import { appChanges, appConfirmationText, appUpdateText, GONE_STATUS, pack, shortAbout, TEXT_LANGS, textLang, type AppSnapshot, type TextLang } from "./messages.ts";
 import { insertNotification, type SubscriberRow } from "./notifications.ts";
 import { applicationById, type ZapApplication } from "./zap.ts";
 
@@ -363,6 +364,18 @@ export function getAppAudioFile(db: Db, id: string): { file_path: string; mime_t
 // ---------------------------------------------------------------- follow
 
 export const snapshotOf = (a: ZapApplication): AppSnapshot => ({ name: a.name, public_status: a.public_status, milestone: a.milestone, milestone_date: a.milestone_date });
+
+/**
+ * What the welcome and update texts show besides the city's status: the site's plain headline in every
+ * language, and a one-line description only when Grok's plain-language version passed the checks
+ * (the city's own description is too technical for a text message).
+ */
+export function aboutOf(db: Db, a: ZapApplication): Pick<AppSnapshot, "about_en" | "about_zh" | "headlines"> {
+  const v = versionView(db, a);
+  const headlines = Object.fromEntries(TEXT_LANGS.map((l) => [l, headlineOfApp(a, l)]));
+  if (v.status === "ready") return { about_en: shortAbout(v.simple_en), about_zh: shortAbout(v.zh), headlines };
+  return { about_en: null, about_zh: null, headlines };
+}
 const zapUrl = (id: string) => `https://zap.planning.nyc.gov/projects/${encodeURIComponent(id)}`;
 
 export interface AppSubscriptionRow {
@@ -388,7 +401,7 @@ export function onAppSubscribed(db: Db, sub: AppSubscriptionRow, subscriber: Sub
     proposal_version: null,
     app_subscription_id: sub.id,
     label: "Follow confirmation (city application)",
-    body: appConfirmationText(sub.project_id, JSON.parse(sub.snapshot_json) as AppSnapshot, zapUrl(sub.project_id), subscriber.preferred_language),
+    body: appConfirmationText(sub.project_id, JSON.parse(sub.snapshot_json) as AppSnapshot, zapUrl(sub.project_id), textLang(subscriber.preferred_language)),
     due_at: nowIso(),
     state: "scheduled",
     is_demo: 0,
@@ -402,7 +415,7 @@ const CHECK_EVERY_MS = 15 * 60_000;
  * status or milestone changed. Each subscription is checked at most every 15 minutes.
  */
 export async function checkAppUpdates(db: Db, fetchApp: (id: string) => Promise<ZapApplication> = applicationById, now = Date.now()): Promise<number> {
-  const due = all<AppSubscriptionRow & { lang: "en" | "zh" }>(
+  const due = all<AppSubscriptionRow & { lang: TextLang }>(
     db,
     `SELECT s.*, sb.preferred_language AS lang FROM app_subscriptions s JOIN subscribers sb ON sb.id = s.subscriber_id
      WHERE s.active = 1 AND sb.active = 1 AND (s.checked_at IS NULL OR s.checked_at < ?)`,
@@ -416,10 +429,11 @@ export async function checkAppUpdates(db: Db, fetchApp: (id: string) => Promise<
     } catch (e) {
       // A 404 means the city no longer lists it as active; say so once. Other errors retry next check.
       if (!(e instanceof HttpError && e.status === 404)) continue;
-      after = { ...(JSON.parse(due.find((s) => s.project_id === projectId)!.snapshot_json) as AppSnapshot), public_status: "No longer listed as active", milestone: null, milestone_date: null };
+      after = { ...(JSON.parse(due.find((s) => s.project_id === projectId)!.snapshot_json) as AppSnapshot), public_status: GONE_STATUS, milestone: null, milestone_date: null };
     }
     for (const s of due.filter((x) => x.project_id === projectId)) {
-      const changes = appChanges(JSON.parse(s.snapshot_json) as AppSnapshot, after, s.lang);
+      const before = JSON.parse(s.snapshot_json) as AppSnapshot;
+      const changes = appChanges(before, after, s.lang);
       if (changes.length) {
         const ok = insertNotification(db, {
           delivery_key: `appupdate:${s.id}:${hashOf(JSON.stringify(after))}`,
@@ -432,13 +446,14 @@ export async function checkAppUpdates(db: Db, fetchApp: (id: string) => Promise<
           proposal_version: null,
           app_subscription_id: s.id,
           label: "City application changed",
-          body: appUpdateText(projectId, after, changes, zapUrl(projectId), s.lang),
+          body: appUpdateText(projectId, { ...before, ...after }, changes, zapUrl(projectId), s.lang),
           due_at: nowIso(),
           state: "scheduled",
           is_demo: 0,
         });
         if (ok) queued++;
-        run(db, "UPDATE app_subscriptions SET snapshot_json=? WHERE id=?", JSON.stringify(after), s.id);
+        // keep the headlines and description from the follow; only the city's status fields change
+        run(db, "UPDATE app_subscriptions SET snapshot_json=? WHERE id=?", JSON.stringify({ ...before, ...after }), s.id);
       }
       run(db, "UPDATE app_subscriptions SET checked_at=? WHERE id=?", new Date(now).toISOString(), s.id);
     }
@@ -448,7 +463,7 @@ export async function checkAppUpdates(db: Db, fetchApp: (id: string) => Promise<
 
 /** Development-only: a DEMO-labelled update to everyone following this application. The city record is untouched. */
 export function queueAppDemoUpdate(db: Db, projectId: string): number {
-  const subs = all<AppSubscriptionRow & { lang: "en" | "zh" }>(
+  const subs = all<AppSubscriptionRow & { lang: TextLang }>(
     db,
     "SELECT s.*, sb.preferred_language AS lang FROM app_subscriptions s JOIN subscribers sb ON sb.id = s.subscriber_id WHERE s.project_id=? AND s.active=1 AND sb.active=1",
     projectId,
@@ -456,7 +471,9 @@ export function queueAppDemoUpdate(db: Db, projectId: string): number {
   let n = 0;
   for (const s of subs) {
     const snap = JSON.parse(s.snapshot_json) as AppSnapshot;
-    const line = s.lang === "zh" ? "这是更新提醒的测试。市政府记录没有变化。" : "This is a test of update alerts. The city's record has not changed.";
+    const t = pack(textLang(s.lang));
+    // what a real update looks like, clearly tagged DEMO; the city's record is untouched
+    const line = t.newStep(t.demoStep);
     const ok = insertNotification(db, {
       delivery_key: `appdemo:${s.id}:${newId("d")}`,
       kind: "update",

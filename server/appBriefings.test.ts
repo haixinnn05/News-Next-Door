@@ -56,7 +56,7 @@ test("following a city application: code → confirmation; repeat is harmless; S
   const confirms = notes(db).filter((n) => n.kind === "confirmation");
   assert.equal(confirms.length, 1);
   assert.ok(confirms[0].app_subscription_id);
-  assert.match(confirms[0].body, /following the NYC Planning application “50-02 Queens Blvd Rezoning”/);
+  assert.match(confirms[0].body, /You're now following:/);
   assert.match(confirms[0].body, /\/a\/2023Q0177/);
 
   queueAppDemoUpdate(db, "2023Q0177");
@@ -75,7 +75,7 @@ test("followers are texted once when the city's status or milestone changes, and
   assert.equal(await checkAppUpdates(db, async () => moved, t0 + 16 * 60_000), 1);
   assert.equal(await checkAppUpdates(db, async () => moved, t0 + 32 * 60_000), 0);
   const update = notes(db).find((n) => n.kind === "update")!;
-  assert.match(update.body, /New milestone: CPC Public Hearing/);
+  assert.match(update.body, /New step: CPC Public Hearing/);
 
   // a city outage is retried later; a 404 means it left active review and is reported once
   assert.equal(await checkAppUpdates(db, async () => { throw new HttpError(502, "down"); }, t0 + 48 * 60_000), 0);

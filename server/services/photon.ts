@@ -2,6 +2,7 @@ import { Spectrum, type Message, type Space } from "spectrum-ts";
 import { imessage } from "spectrum-ts/providers/imessage";
 import { config } from "../config.ts";
 import type { Db } from "../db.ts";
+import { respondToInbound } from "./assistant.ts";
 import { runDueNotifications } from "./notifications.ts";
 import { handleInbound } from "./subscriptions.ts";
 import { setPhotonTransport, type Transport } from "./transport.ts";
@@ -42,12 +43,30 @@ export async function startPhoton(db: Db): Promise<SpectrumApp> {
         const r = handleInbound(db, { providerEventId: message.id, handle: ev.sender, spaceId: space.id, text: ev.text, transport: "photon" });
         console.log(`[photon] inbound ${message.id} → ${r.action}`);
         await runDueNotifications(db); // reply immediately rather than waiting for the next tick
+        if (r.action === "question" || r.action === "list") {
+          // answer in the background (a model call can take seconds) so other texts aren't held up
+          void answerWithTyping(db, space, r, ev.text, message.id);
+        }
       } catch (err) {
         console.error("[photon] handler error", err);
       }
     }
   })().catch((e) => console.error("[photon] stream ended", e));
   return app;
+}
+
+/** Show the typing bubble while the assistant works, then send its reply. */
+async function answerWithTyping(db: Db, space: Space, r: { action: string; subscriberId?: string }, text: string, key: string): Promise<void> {
+  const typing = space as unknown as { startTyping?: () => Promise<void>; stopTyping?: () => Promise<void> };
+  await typing.startTyping?.().catch(() => {});
+  try {
+    await respondToInbound(db, r, text, key);
+  } catch (err) {
+    console.error("[photon] assistant error", err);
+  } finally {
+    await typing.stopTyping?.().catch(() => {});
+  }
+  await runDueNotifications(db);
 }
 
 function toText(space: Space, message: Message): { sender: string; text: string } | undefined {

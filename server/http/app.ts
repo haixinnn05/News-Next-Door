@@ -19,6 +19,8 @@ import {
   versionPrompt,
   versionView,
 } from "../services/appBriefings.ts";
+import { respondToInbound } from "../services/assistant.ts";
+import { textLang } from "../services/messages.ts";
 import * as audio from "../services/audio.ts";
 import { fetchRemote, getDocument, getPages, importDocument, type DocumentRow } from "../services/documents.ts";
 import { extractDocument, extractionPrompt, importPastedExtraction, getDraft, listDrafts, saveDraft, CATEGORIES, EVENT_TYPES, STAGE_KINDS, type DraftRow } from "../services/extraction.ts";
@@ -198,7 +200,7 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
   app.post("/api/applications/:id/follow", async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { language?: string };
     const session = await sessionOf(c);
-    const fc = createAppFollowCode(db, await applicationById(c.req.param("id")), body.language === "zh" ? "zh" : "en", session?.user.id ?? null);
+    const fc = createAppFollowCode(db, await applicationById(c.req.param("id")), textLang(body.language), session?.user.id ?? null);
     return c.json(await followResponse(fc.code, fc.expires_at));
   });
 
@@ -211,7 +213,7 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
   app.post("/api/proposals/:id/follow", async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { language?: string };
     const session = await sessionOf(c);
-    const fc = createFollowCode(db, c.req.param("id"), body.language === "zh" ? "zh" : "en", session?.user.id ?? null);
+    const fc = createFollowCode(db, c.req.param("id"), textLang(body.language), session?.user.id ?? null);
     return c.json(await followResponse(fc.code, fc.expires_at));
   });
 
@@ -242,9 +244,11 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
     const { handle, text } = (await c.req.json()) as { handle?: string; text?: string };
     if (!handle || !text) throw new HttpError(400, "handle and text required");
     run(db, "INSERT INTO sim_messages (handle, direction, text, at) VALUES (?,?,?,?)", handle, "from_phone", text, nowIso());
-    const r = handleInbound(db, { providerEventId: newId("sim"), handle, spaceId: null, text, transport: "simulator" });
+    const key = newId("sim");
+    const r = handleInbound(db, { providerEventId: key, handle, spaceId: null, text, transport: "simulator" });
+    if (r.action === "question" || r.action === "list") await respondToInbound(db, r, text, key);
     await runDueNotifications(db);
-    return c.json(r);
+    return c.json({ action: r.action });
   });
   app.get("/api/sim/thread", (c) => {
     const handle = c.req.query("handle") ?? "";
