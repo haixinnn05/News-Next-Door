@@ -28,6 +28,7 @@ import { coverage, getProposal, listPublished, proposalCard, proposalDetail, pub
 import { createAppFollowCode, createFollowCode, followStatus, handleInbound } from "../services/subscriptions.ts";
 import { BOARDS, boardById, DEFAULT_BOARD_ID } from "../lib/boards.ts";
 import { communityDistrictBoundary } from "../services/boundary.ts";
+import { locateAddress, locatePoint, suggestAddresses } from "../services/locate.ts";
 import { applicationById, districtApplications } from "../services/zap.ts";
 
 const MIME: Record<string, string> = { ".mp3": "audio/mpeg", ".flac": "audio/flac", ".pdf": "application/pdf", ".html": "text/html; charset=utf-8" };
@@ -153,6 +154,13 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
     if (!board) throw new HttpError(404, "Unknown community board");
     return c.json({ board_id: board.id, geometry: await communityDistrictBoundary(board.boroCd) });
   });
+
+  app.get("/api/locate", async (c) => {
+    const { q, lat, lng, label } = c.req.query();
+    if (lat !== undefined || lng !== undefined) return c.json(await locatePoint(label ?? "", Number(lat), Number(lng)));
+    return c.json(await locateAddress(q ?? ""));
+  });
+  app.get("/api/locate/suggest", async (c) => c.json(await suggestAddresses(c.req.query("q") ?? "")));
 
   app.get("/api/applications", async (c) => {
     const board = boardById(c.req.query("board") || DEFAULT_BOARD_ID);

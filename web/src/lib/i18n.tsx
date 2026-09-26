@@ -149,6 +149,15 @@ const en = {
 
 type ExtraKey =
   | "actionsRequested"
+  | "addressClear"
+  | "addressFind"
+  | "addressInside"
+  | "addressNearest"
+  | "addressNearestArea"
+  | "addressNotFound"
+  | "addressPlaceholder"
+  | "addressUnavailable"
+  | "close"
   | "audioEnZhOnly"
   | "appLede"
   | "ceqrNumber"
@@ -1058,6 +1067,15 @@ const ru: Pack = {
 
 const extra: Record<Lang, Record<ExtraKey, string>> = {
   en: {
+    addressClear: "Clear address",
+    addressFind: "Find my board",
+    addressInside: "{address} is in {board}.",
+    addressNearest: "{address} is in {district}, which we don't cover yet. Showing the closest board we cover: {board}, {distance} away.",
+    addressNearestArea: "{address} isn't in a community board we cover. Showing the closest one: {board}, {distance} away.",
+    addressNotFound: "We couldn't find that address in New York City.",
+    addressPlaceholder: "Type your address",
+    addressUnavailable: "Address search isn't working right now. Pick a board from the list instead.",
+    close: "Close",
     audioEnZhOnly: "Audio is only in English and 中文 for now, so this is the English version.",
     actionsRequested: "Actions requested",
     appLede: "This is the city's own record. The description, status, and dates are what the city published.",
@@ -1117,6 +1135,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "View details",
   },
   zh: {
+    addressClear: "清除地址",
+    addressFind: "查找我的社区委员会",
+    addressInside: "{address}位于{board}。",
+    addressNearest: "{address}位于{district}，我们暂未覆盖该区。正在显示我们覆盖的最近的社区委员会：{board}，距离{distance}。",
+    addressNearestArea: "{address}不在我们覆盖的社区委员会内。正在显示最近的：{board}，距离{distance}。",
+    addressNotFound: "在纽约市找不到这个地址。",
+    addressPlaceholder: "输入您的地址",
+    addressUnavailable: "地址搜索暂时无法使用。请从列表中选择社区委员会。",
+    close: "关闭",
     audioEnZhOnly: "目前语音只有英文和中文。",
     actionsRequested: "申请事项",
     appLede: "这是市政府公布的记录。以下说明、状态和日期都来自市政府。",
@@ -1176,6 +1203,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "查看详情",
   },
   es: {
+    addressClear: "Borrar dirección",
+    addressFind: "Buscar mi junta",
+    addressInside: "{address} está en {board}.",
+    addressNearest: "{address} está en {district}, que aún no cubrimos. Mostramos la junta más cercana que cubrimos: {board}, a {distance}.",
+    addressNearestArea: "{address} no está en una junta que cubramos. Mostramos la más cercana: {board}, a {distance}.",
+    addressNotFound: "No encontramos esa dirección en la ciudad de Nueva York.",
+    addressPlaceholder: "Escriba su dirección",
+    addressUnavailable: "La búsqueda de direcciones no funciona ahora. Elija una junta de la lista.",
+    close: "Cerrar",
     audioEnZhOnly: "Por ahora el audio solo está en inglés y chino, así que esta es la versión en inglés.",
     actionsRequested: "Trámites pedidos",
     appLede: "Este es el registro de la ciudad. La descripción, el estado y las fechas son los que publicó la ciudad.",
@@ -1235,6 +1271,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "Ver detalles",
   },
   fr: {
+    addressClear: "Effacer l'adresse",
+    addressFind: "Trouver mon conseil",
+    addressInside: "{address} se trouve dans {board}.",
+    addressNearest: "{address} se trouve dans {district}, que nous ne couvrons pas encore. Voici le conseil couvert le plus proche : {board}, à {distance}.",
+    addressNearestArea: "{address} n'est dans aucun conseil que nous couvrons. Voici le plus proche : {board}, à {distance}.",
+    addressNotFound: "Nous n'avons pas trouvé cette adresse à New York.",
+    addressPlaceholder: "Saisissez votre adresse",
+    addressUnavailable: "La recherche d'adresse ne fonctionne pas pour le moment. Choisissez un conseil dans la liste.",
+    close: "Fermer",
     audioEnZhOnly: "Pour l'instant, l'audio n'existe qu'en anglais et en chinois : voici la version anglaise.",
     actionsRequested: "Démarches demandées",
     appLede: "Ceci est le dossier de la ville. La description, l'état et les dates viennent de la ville.",
@@ -1294,6 +1339,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "Voir le détail",
   },
   ja: {
+    addressClear: "住所を消去",
+    addressFind: "自分の委員会を探す",
+    addressInside: "{address}は{board}にあります。",
+    addressNearest: "{address}は{district}にありますが、まだ対象外です。対象の中で最も近い{board}（{distance}先）を表示しています。",
+    addressNearestArea: "{address}は対象の委員会の区域外です。最も近い{board}（{distance}先）を表示しています。",
+    addressNotFound: "ニューヨーク市内でその住所が見つかりませんでした。",
+    addressPlaceholder: "住所を入力",
+    addressUnavailable: "住所検索は現在利用できません。一覧から委員会を選んでください。",
+    close: "閉じる",
     audioEnZhOnly: "音声は現在、英語と中国語のみです。英語版を再生します。",
     actionsRequested: "求めている手続き",
     appLede: "これは市が公表した記録です。説明、状態、日付は市の発表です。",
@@ -1353,6 +1407,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "詳しく見る",
   },
   hi: {
+    addressClear: "पता हटाएँ",
+    addressFind: "मेरा बोर्ड खोजें",
+    addressInside: "{address} {board} में है।",
+    addressNearest: "{address} {district} में है, जिसे हम अभी कवर नहीं करते। हम सबसे नज़दीकी कवर किया गया बोर्ड दिखा रहे हैं: {board}, {distance} दूर।",
+    addressNearestArea: "{address} हमारे किसी बोर्ड में नहीं है। सबसे नज़दीकी बोर्ड दिखा रहे हैं: {board}, {distance} दूर।",
+    addressNotFound: "न्यूयॉर्क सिटी में यह पता नहीं मिला।",
+    addressPlaceholder: "अपना पता लिखें",
+    addressUnavailable: "पता खोज अभी काम नहीं कर रही है। सूची से बोर्ड चुनें।",
+    close: "बंद करें",
     audioEnZhOnly: "अभी ऑडियो केवल अंग्रेज़ी और चीनी में उपलब्ध है, इसलिए यह अंग्रेज़ी संस्करण है।",
     actionsRequested: "माँगे गए कदम",
     appLede: "यह शहर का अपना रिकॉर्ड है। विवरण, स्थिति और तारीखें शहर ने प्रकाशित की हैं।",
@@ -1412,6 +1475,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "विवरण देखें",
   },
   ar: {
+    addressClear: "مسح العنوان",
+    addressFind: "ابحث عن مجلسي",
+    addressInside: "{address} يقع في {board}.",
+    addressNearest: "{address} يقع في {district}، وهي منطقة لا نغطيها بعد. نعرض أقرب مجلس نغطيه: {board}، على بعد {distance}.",
+    addressNearestArea: "{address} ليس ضمن مجلس نغطيه. نعرض الأقرب: {board}، على بعد {distance}.",
+    addressNotFound: "لم نجد هذا العنوان في مدينة نيويورك.",
+    addressPlaceholder: "اكتب عنوانك",
+    addressUnavailable: "البحث عن العنوان لا يعمل الآن. اختر مجلسًا من القائمة.",
+    close: "إغلاق",
     audioEnZhOnly: "الصوت متاح حاليًا بالإنجليزية والصينية فقط، لذا هذه هي النسخة الإنجليزية.",
     actionsRequested: "الإجراءات المطلوبة",
     appLede: "هذا سجل المدينة. الوصف والحالة والتواريخ هي ما نشرته المدينة.",
@@ -1471,6 +1543,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "عرض التفاصيل",
   },
   ru: {
+    addressClear: "Очистить адрес",
+    addressFind: "Найти мой совет",
+    addressInside: "{address} находится в {board}.",
+    addressNearest: "{address} находится в {district}, который мы пока не охватываем. Показываем ближайший из наших советов: {board}, в {distance}.",
+    addressNearestArea: "{address} не входит в наши советы. Показываем ближайший: {board}, в {distance}.",
+    addressNotFound: "Не удалось найти этот адрес в Нью-Йорке.",
+    addressPlaceholder: "Введите ваш адрес",
+    addressUnavailable: "Поиск адреса сейчас не работает. Выберите совет из списка.",
+    close: "Закрыть",
     audioEnZhOnly: "Пока аудио есть только на английском и китайском, поэтому это английская версия.",
     actionsRequested: "Запрошенные действия",
     appLede: "Это запись города. Описание, статус и даты опубликованы городом.",

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AddressSearch } from "../components/AddressSearch";
 import { CoverageMap } from "../components/CoverageMap";
 import { NewsFeed } from "../components/NewsFeed";
 import { api } from "../lib/api";
@@ -7,6 +8,7 @@ import { useBoard } from "../lib/board";
 import { useLang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { storyFromApp } from "../lib/story";
+import type { LocateResult } from "../lib/types";
 import { zhBoardName } from "../lib/zhCivic";
 
 const QUEENS_LABELS: [string, number, number][] = [
@@ -18,13 +20,21 @@ const QUEENS_LABELS: [string, number, number][] = [
 
 export function Discover() {
   const { t, lang } = useLang();
-  const { user, loading: accountLoading, zoneId, zoneReady, openSignIn, openZone } = useAccount();
+  const { user, loading: accountLoading, zoneId, zoneReady, openSignIn, openZone, saveZone } = useAccount();
   const { boards } = useBoard();
   const board = boards.find((b) => b.id === zoneId) ?? null;
   const apps = useLoad(() => (board ? api.applications(board.id) : Promise.reject(new Error("zone"))), [board?.id ?? ""]);
   const boundary = useLoad(() => (board ? api.boundary(board.id) : Promise.reject(new Error("zone"))), [board?.id ?? ""]);
   const [hovered, setHovered] = useState<string | null>(null);
   useEffect(() => setHovered(null), [board?.id]);
+  const [located, setLocated] = useState<LocateResult | null>(null);
+  const onLocate = (r: LocateResult | null) => {
+    setLocated(r);
+    if (r && r.board_id !== zoneId) void saveZone(r.board_id).catch(() => {});
+  };
+  // Picking another zone drops the searched address.
+  const shown = board && located?.board_id === board.id ? located : null;
+  const home = useMemo(() => (shown ? { label: shown.label, lat: shown.lat, lng: shown.lng } : null), [shown]);
 
   const fresh = board && apps.data?.source.board_id === board.id ? apps.data : null;
   const outline = board && boundary.data?.board_id === board.id ? boundary.data.geometry : null;
@@ -96,11 +106,14 @@ export function Discover() {
         proposals={[]}
         places={places}
         boundary={outline}
+        home={home}
         areaLabel={lang === "zh" ? zhBoardName(board, lang) : board.shortName}
         labels={board.id === "queens-cb2" ? QUEENS_LABELS : []}
         hovered={hovered}
         onHover={setHovered}
-      />
+      >
+        <AddressSearch located={shown} onLocate={onLocate} />
+      </CoverageMap>
     </div>
   );
 }

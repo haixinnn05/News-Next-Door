@@ -1,4 +1,4 @@
-import type { AppAudioView, Board, DistrictGeometry, FollowResponse, Meta, MyProposals, ProposalDetail, SearchResponse, ZapApplication, ZapFeed } from "./types";
+import type { AddressSuggestion, AppAudioView, Board, DistrictGeometry, FollowResponse, LocateResult, Meta, MyProposals, ProposalDetail, SearchResponse, ZapApplication, ZapFeed } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -26,6 +26,9 @@ export const api = {
   search: (q = "", category = "all") => request<SearchResponse>(`/api/proposals?q=${encodeURIComponent(q)}&category=${category}`),
   boards: () => request<{ default_id: string; boards: Board[] }>("/api/boards"),
   boundary: (boardId: string) => request<{ board_id: string; geometry: DistrictGeometry }>(`/api/boards/${encodeURIComponent(boardId)}/boundary`),
+  locate: (address: string) => request<LocateResult>(`/api/locate?q=${encodeURIComponent(address)}`),
+  locateAt: (s: AddressSuggestion) => request<LocateResult>(`/api/locate?${new URLSearchParams({ lat: String(s.lat), lng: String(s.lng), label: s.label })}`),
+  suggest: (q: string, signal?: AbortSignal) => request<AddressSuggestion[]>(`/api/locate/suggest?q=${encodeURIComponent(q)}`, { signal }),
   applications: (boardId: string) => request<ZapFeed>(`/api/applications?board=${encodeURIComponent(boardId)}`),
   application: (id: string) => request<ZapApplication>(`/api/applications/${encodeURIComponent(id)}`),
   summarize: (id: string, language: string) => request<{ summary: string; model: string }>(`/api/applications/${encodeURIComponent(id)}/summarize`, json("POST", { language })),

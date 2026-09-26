@@ -1,5 +1,5 @@
 import L from "leaflet";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { titleOf } from "../lib/format";
 import { useLang } from "../lib/i18n";
 import { useRouter } from "../lib/router";
@@ -28,22 +28,33 @@ export interface MapPlace {
   url: string;
 }
 
+export interface MapHome {
+  label: string;
+  lat: number;
+  lng: number;
+}
+
 export function CoverageMap({
   proposals,
   places = [],
   boundary = null,
+  home = null,
   areaLabel,
   labels = [],
   hovered,
   onHover,
+  children,
 }: {
   proposals: ProposalCard[];
   places?: MapPlace[];
   boundary?: DistrictGeometry | null;
+  /** A searched address; the map frames it together with the district outline. */
+  home?: MapHome | null;
   areaLabel: string;
   labels?: [string, number, number][];
   hovered: string | null;
   onHover: (id: string | null) => void;
+  children?: ReactNode;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -104,13 +115,34 @@ export function CoverageMap({
     if (!m) return;
     outline.current?.remove();
     outline.current = null;
-    if (!boundary) return;
-    outline.current = L.geoJSON({ type: "Feature", geometry: boundary, properties: {} } as GeoJSON.Feature, {
-      style: { color: "#111", weight: 2.5, opacity: 1, fillColor: "#e10600", fillOpacity: 0.12 },
-    }).addTo(m);
-    const frame = outline.current.getBounds();
-    if (frame.isValid()) m.fitBounds(frame.pad(0.45));
-  }, [boundary]);
+    if (boundary) {
+      outline.current = L.geoJSON({ type: "Feature", geometry: boundary, properties: {} } as GeoJSON.Feature, {
+        style: { color: "#111", weight: 2.5, opacity: 1, fillColor: "#e10600", fillOpacity: 0.12 },
+      }).addTo(m);
+    }
+    const frame = outline.current ? outline.current.getBounds() : L.latLngBounds([]);
+    if (home) frame.extend([home.lat, home.lng]);
+    if (!frame.isValid()) return;
+    if (outline.current) m.fitBounds(frame.pad(home ? 0.25 : 0.45));
+    // Not animated: Leaflet drops fitBounds calls made during a zoom animation, and the outline usually lands mid-animation.
+    else if (home) m.setView([home.lat, home.lng], 14, { animate: false });
+  }, [boundary, home]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !home) return;
+    const mk = L.marker([home.lat, home.lng], {
+      icon: L.divIcon({ className: "", html: '<span class="home-dot"></span>', iconSize: [22, 22], iconAnchor: [11, 11] }),
+      title: home.label,
+      keyboard: false,
+      zIndexOffset: 1000,
+    })
+      .bindTooltip(home.label, { direction: "top", offset: [0, -12], className: "pin-tip" })
+      .addTo(m);
+    return () => {
+      mk.remove();
+    };
+  }, [home]);
 
   useEffect(() => {
     const g = layer.current;
@@ -165,6 +197,7 @@ export function CoverageMap({
         <span className="dot" /> {areaLabel}
       </div>
       <div className="map-attrib">© Esri</div>
+      {children}
       <div className="map-zoom">
         <button onClick={() => map.current?.zoomIn()} aria-label="Zoom in">
           <Icon name="plus" size={16} />

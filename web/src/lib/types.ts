@@ -39,6 +39,24 @@ export interface DistrictGeometry {
   coordinates: number[][][] | number[][][][];
 }
 
+export interface AddressSuggestion {
+  label: string;
+  name: string;
+  area: string;
+  lat: number;
+  lng: number;
+}
+
+export interface LocateResult {
+  label: string;
+  lat: number;
+  lng: number;
+  board_id: string;
+  inside: boolean;
+  district: string | null;
+  distance_m: number;
+}
+
 export interface ZapFeed {
   source: { name: string; dataset_url: string; board_id: string; board: string; fetched_at: string };
   applications: ZapApplication[];
