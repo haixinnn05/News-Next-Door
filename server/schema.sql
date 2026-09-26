@@ -136,7 +136,8 @@ CREATE TABLE IF NOT EXISTS subscribers (
   opted_in_at        TEXT NOT NULL,
   active             INTEGER NOT NULL DEFAULT 1,
   stopped_at         TEXT,
-  created_at         TEXT NOT NULL
+  created_at         TEXT NOT NULL,
+  user_id            TEXT                   -- Better Auth user who linked this phone by following while signed in
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -155,7 +156,15 @@ CREATE TABLE IF NOT EXISTS follow_codes (
   created_at    TEXT NOT NULL,
   expires_at    TEXT NOT NULL,
   used_at       TEXT,
-  subscription_id TEXT
+  subscription_id TEXT,
+  user_id       TEXT                        -- signed-in resident who requested the code, if any
+);
+
+CREATE TABLE IF NOT EXISTS saved_proposals (
+  user_id     TEXT NOT NULL,                -- Better Auth user id
+  proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+  created_at  TEXT NOT NULL,
+  PRIMARY KEY (user_id, proposal_id)
 );
 
 CREATE TABLE IF NOT EXISTS notifications (

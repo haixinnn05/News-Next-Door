@@ -15,11 +15,28 @@ cp .env.example .env        # add keys when you have them; everything is optiona
 npm run dev                 # API on :8790, web on http://localhost:5190
 ```
 
-- Resident site: <http://localhost:5190>
-- Team console: <http://localhost:5190/admin> (password = `ADMIN_TOKEN`, default `before-the-vote-team`)
+- Resident site: <http://localhost:5190>. **Sign in** (top right) with email and password, or Google once configured. Signed-in residents can save proposals and see saved and text-followed proposals at `/me`. Browsing and following by text still work without an account.
+- Team console: <http://localhost:5190/admin>. Sign in with Google when `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are set (only emails in `ADMIN_EMAILS` get in); otherwise the password is `ADMIN_TOKEN`, default `before-the-vote-team`
 - Simulated phone (used when Photon isn't configured): <http://localhost:5190/phone>
 
 Production: `npm run build && npm start` serves the built site and API from one persistent Node process on `PORT`. The reminder worker and Photon listener run in the same process. SQLite and audio files live in `DATA_DIR`, so use a host with a persistent disk (or a laptop plus a tunnel), not serverless.
+
+### Sign in with Google (TODO)
+
+Resident accounts work now with email and password. The same Google keys add **Continue with Google** for residents and switch the team console from the shared `ADMIN_TOKEN` password to Google sign-in (Better Auth):
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), choose **Create credentials → OAuth client ID → Web application**. Set up the OAuth consent screen first if Google asks.
+2. Add the authorized redirect URI `http://localhost:5190/api/auth/callback/google`.
+3. Fill in `.env`:
+   ```bash
+   GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=...
+   ADMIN_EMAILS=you@gmail.com,teammate@gmail.com   # only these accounts get into the team console
+   BETTER_AUTH_SECRET=...                          # openssl rand -base64 32
+   ```
+4. Restart `npm run dev`. The startup log should show `team login : Google (N allowed emails)`, and `ADMIN_TOKEN` stops working.
+
+For production, set `PUBLIC_BASE_URL` to the real domain, add `https://<your-domain>/api/auth/callback/google` as a second redirect URI, and set `BETTER_AUTH_SECRET` on the host (Better Auth refuses to start without it in production). Removing an email from `ADMIN_EMAILS` cuts off that person's access on their next request. Team members must use Google: an email/password account is never treated as a team member, even if its email is on the list, because the app doesn't send verification emails.
 
 ### Hour-one integration checks
 

@@ -311,9 +311,27 @@ img, svg { display: block; }
 .evidence-table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 
 /* modal & toast */
-.modal-back { position: fixed; inset: 0; z-index: 100; background: rgba(20, 22, 18, 0.42); display: grid; place-items: center; padding: 20px; animation: fade 0.15s; }
+.modal-back { position: fixed; inset: 0; z-index: 1100; background: rgba(20, 22, 18, 0.42); display: grid; place-items: center; padding: 20px; animation: fade 0.15s; }
 .modal { width: min(420px, 100%); max-height: calc(100vh - 40px); overflow: auto; background: var(--surface); border-radius: 16px; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.35); animation: rise 0.2s; }
 .modal .m-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px 0 22px; }
+
+/* resident account */
+.account-slot { width: 34px; height: 34px; }
+.account-menu { position: relative; }
+.avatar-btn { width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--green-50); color: var(--green-800); font-weight: 700; font-size: 14px; display: grid; place-items: center; overflow: hidden; cursor: pointer; }
+.avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
+.account-pop { position: absolute; right: 0; top: calc(100% + 8px); min-width: 230px; display: grid; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); z-index: 60; }
+.account-who { display: grid; gap: 2px; padding: 8px 10px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line); font-size: 14px; overflow-wrap: anywhere; }
+.account-pop button { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 0; border-radius: 8px; background: none; font-size: 14px; text-align: left; color: var(--ink); cursor: pointer; }
+.account-pop button:hover { background: var(--surface-2); }
+.signin-body { display: grid; gap: 14px; padding: 12px 22px 22px; }
+.signin-body p { margin: 0; }
+.signin-form { display: grid; gap: 12px; }
+.signin-or { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--ink-3); }
+.signin-or::before, .signin-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.signin-switch { text-align: center; }
+.signin-switch .link { border: 0; background: none; padding: 0; cursor: pointer; font-size: inherit; }
+.btn.saved { background: var(--green-50); border-color: #cfdcc0; color: var(--green-800); }
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { transform: translateY(10px); opacity: 0; } }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 200; background: #1b1d1a; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); animation: rise 0.2s; }
@@ -384,6 +402,7 @@ img, svg { display: block; }
 .adm-side-links { display: grid; gap: 2px; padding: 0 4px; }
 .adm-side-links a, .adm-side-links button { display: inline-flex; align-items: center; gap: 7px; padding: 5px 8px; border: 0; background: none; border-radius: 6px; font-size: 12.5px; color: rgba(255, 255, 255, 0.62); text-align: left; }
 .adm-side-links a:hover, .adm-side-links button:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+.adm-member { padding: 5px 8px; font-size: 12px; color: rgba(255, 255, 255, 0.45); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .adm-main { min-width: 0; padding: 32px 36px 48px; }
 .adm-page { max-width: 1180px; }
 
@@ -601,6 +620,7 @@ a.adm-cell-title:hover { text-decoration: underline; }
 /* login */
 .adm-login { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at top, #eef0e4 0%, var(--bg) 60%); }
 .adm-login-card { width: min(400px, 100%); display: grid; gap: 14px; padding: 28px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.adm-login-card form { display: contents; }
 .adm-login-card h1 { margin: 6px 0 0; font-size: 21px; letter-spacing: -0.02em; }
 .adm-login-card p { margin: 0; }
 .adm-login-brand { display: flex; align-items: center; gap: 10px; }

@@ -221,4 +221,16 @@ export interface Overview {
   };
   public_base_url: string;
   show_sample_data: boolean;
+  team_sign_in: { mode: TeamSignIn; allowed_emails: number | null };
+}
+
+export type TeamSignIn = "google" | "token";
+export interface TeamMember {
+  email: string;
+  name: string;
+  image: string | null;
+}
+export interface Me {
+  sign_in: TeamSignIn;
+  member: TeamMember | null;
 }

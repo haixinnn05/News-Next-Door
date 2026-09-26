@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useAccount } from "../lib/account";
 import { api } from "../lib/api";
 import { useLang } from "../lib/i18n";
 import { Link } from "../lib/router";
@@ -20,6 +21,7 @@ function formatLine(addr: string | null): string | null {
 export function FollowPanel({ proposalId, title }: { proposalId: string; title: string }) {
   const { t, lang } = useLang();
   const toast = useToast();
+  const { user } = useAccount();
   const [f, setF] = useState<FollowResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"waiting" | "confirmed" | "expired" | "unknown">("waiting");
@@ -144,6 +146,11 @@ export function FollowPanel({ proposalId, title }: { proposalId: string; title: 
           <p className="xs subtle" style={{ marginTop: 12 }}>
             {t("youllGetConfirm")}
           </p>
+          {user && (
+            <p className="xs subtle" style={{ marginTop: 6 }}>
+              {t("followLinked")}
+            </p>
+          )}
         </>
       ) : (
         !error && <div className="skeleton" style={{ height: 230, marginTop: 16 }} />

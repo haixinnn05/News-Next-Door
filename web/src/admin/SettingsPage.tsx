@@ -91,9 +91,17 @@ export function SettingsPage() {
                   <dd>{o.show_sample_data ? "Shown on the public site (labelled Sample)" : "Hidden from the public site"}</dd>
                 </div>
                 <div>
-                  <dt>Admin token</dt>
+                  <dt>Team sign-in</dt>
                   <dd>
-                    Set <code>ADMIN_TOKEN</code> in <code>.env</code> (development default: <code>before-the-vote-team</code>).
+                    {o.team_sign_in.mode === "google" ? (
+                      <>
+                        Google, limited to {o.team_sign_in.allowed_emails} email{o.team_sign_in.allowed_emails === 1 ? "" : "s"} in <code>ADMIN_EMAILS</code>.
+                      </>
+                    ) : (
+                      <>
+                        Shared <code>ADMIN_TOKEN</code> (development default: <code>before-the-vote-team</code>). Set <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> to switch to Google sign-in.
+                      </>
+                    )}
                   </dd>
                 </div>
               </dl>

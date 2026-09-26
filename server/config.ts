@@ -17,7 +17,20 @@ export const config = {
   projectRoot,
   port: Number(env("PORT", "8790")),
   publicBaseUrl: env("PUBLIC_BASE_URL", "http://localhost:5190").replace(/\/$/, ""),
+  /** Shared console password, used only when Google sign-in isn't configured. */
   adminToken: env("ADMIN_TOKEN", "before-the-vote-team"),
+  auth: {
+    secret: env("BETTER_AUTH_SECRET"),
+    googleClientId: env("GOOGLE_CLIENT_ID"),
+    googleClientSecret: env("GOOGLE_CLIENT_SECRET"),
+    adminEmails: env("ADMIN_EMAILS")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+    get googleEnabled() {
+      return this.googleClientId.length > 0 && this.googleClientSecret.length > 0;
+    },
+  },
   dataDir,
   dbPath: resolveFromRoot(env("DB_PATH", path.join(dataDir, "btv.sqlite"))),
   uploadsDir: path.join(dataDir, "documents"),
