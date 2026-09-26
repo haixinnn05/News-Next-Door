@@ -11,7 +11,7 @@ import { myProposals, setSaved } from "../services/account.ts";
 import * as audio from "../services/audio.ts";
 import { fetchRemote, getDocument, getPages, importDocument, type DocumentRow } from "../services/documents.ts";
 import { extractDocument, extractionPrompt, importPastedExtraction, getDraft, listDrafts, saveDraft, CATEGORIES, EVENT_TYPES, STAGE_KINDS, type DraftRow } from "../services/extraction.ts";
-import { translateCardToChinese } from "../services/grok.ts";
+import { summarizeApplication, translateCardToChinese } from "../services/grok.ts";
 import { queueTestMessage, reconcileReminders, runDueNotifications, type NotificationRow, type SubscriberRow } from "../services/notifications.ts";
 import { coverage, getProposal, listPublished, proposalCard, proposalDetail, publishDraft, search, type ProposalRow } from "../services/proposals.ts";
 import { createFollowCode, followStatus, handleInbound } from "../services/subscriptions.ts";
@@ -112,6 +112,25 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
   });
 
   app.get("/api/applications/:id", async (c) => c.json(await applicationById(c.req.param("id"))));
+
+  app.post("/api/applications/:id/summarize", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { language?: string };
+    const app = await applicationById(c.req.param("id"));
+    const { summary, model } = await summarizeApplication(
+      {
+        name: app.name,
+        brief: app.brief,
+        public_status: app.public_status,
+        applicant: app.applicant,
+        districts: app.districts,
+        location: app.location?.label ?? null,
+        milestone: app.milestone,
+        actions: app.actions.map((action) => action.label),
+      },
+      body.language || "en",
+    );
+    return c.json({ summary, model });
+  });
 
   app.get("/api/proposals/:id", (c) => {
     const p = getProposal(db, c.req.param("id"));

@@ -28,6 +28,7 @@ export const api = {
   boundary: (boardId: string) => request<{ board_id: string; geometry: DistrictGeometry }>(`/api/boards/${encodeURIComponent(boardId)}/boundary`),
   applications: (boardId: string) => request<ZapFeed>(`/api/applications?board=${encodeURIComponent(boardId)}`),
   application: (id: string) => request<ZapApplication>(`/api/applications/${encodeURIComponent(id)}`),
+  summarize: (id: string, language: string) => request<{ summary: string; model: string }>(`/api/applications/${encodeURIComponent(id)}/summarize`, json("POST", { language })),
   proposal: (id: string) => request<ProposalDetail>(`/api/proposals/${id}`),
   follow: (id: string, language: string) => request<FollowResponse>(`/api/proposals/${id}/follow`, json("POST", { language })),
   followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "expired" | "unknown" }>(`/api/follow/${code}`),

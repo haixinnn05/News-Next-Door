@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NewsArticle } from "../components/NewsFeed";
 import { api } from "../lib/api";
 import { fmtDate } from "../lib/format";
@@ -39,9 +40,53 @@ export function ApplicationPage({ id }: { id: string }) {
         </Link>
       </div>
     );
-  const story = storyFromApp(app, lang);
-  const brief = app.brief ? zhCivic(app.brief, lang) : null;
-  return <NewsArticle story={story} glance={glanceOf(app, t, lang)} body={brief} actions={<SaveButton proposalId={app.id} />} />;
+  return <NewsArticle story={storyFromApp(app, lang)} glance={glanceOf(app, t, lang)} body={<StoryBody app={app} />} actions={<SaveButton proposalId={app.id} />} />;
+}
+
+function StoryBody({ app }: { app: ZapApplication }) {
+  const { t, lang } = useLang();
+  const city = app.brief ? zhCivic(app.brief, lang) : null;
+  const [summary, setSummary] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSummary(null);
+    setError(null);
+  }, [app.id, lang]);
+
+  const summarize = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setSummary((await api.summarize(app.id, lang)).summary);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      {city && <p className="news-body">{city}</p>}
+      {!summary && (
+        <div className="news-summarize">
+          <button type="button" disabled={busy} onClick={() => void summarize()}>
+            {busy ? t("summarizing") : t("summarize")}
+          </button>
+        </div>
+      )}
+      {summary && (
+        <div className="news-plain">
+          <p className="news-kicker">{t("showSummary")}</p>
+          <p className="news-body">{summary}</p>
+          <p className="news-note">{t("summaryNote")}</p>
+        </div>
+      )}
+      {error && <p className="news-note">{error}</p>}
+    </>
+  );
 }
 
 function glanceOf(app: ZapApplication, t: (k: Key) => string, lang: Lang) {

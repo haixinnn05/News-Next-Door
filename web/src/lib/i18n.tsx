@@ -187,6 +187,11 @@ type ExtraKey =
   | "stopHint"
   | "team"
   | "ulurpNumbers"
+  | "showCity"
+  | "showSummary"
+  | "summarize"
+  | "summarizing"
+  | "summaryNote"
   | "viewDetails";
 
 export type Key = keyof typeof en | ExtraKey;
@@ -1080,6 +1085,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "To stop texts, reply STOP from your phone.",
     team: "Team",
     ulurpNumbers: "ULURP numbers",
+    showCity: "City wording",
+    showSummary: "Plain version",
+    summarize: "Summarize",
+    summarizing: "Summarizing…",
+    summaryNote: "Plain language by Grok, using only the city's record. It does not add facts.",
     viewDetails: "View details",
   },
   zh: {
@@ -1122,6 +1132,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "如需停止短信，请用手机回复 STOP。",
     team: "团队",
     ulurpNumbers: "ULURP 编号",
+    showCity: "市政府原文",
+    showSummary: "白话版本",
+    summarize: "用白话说明",
+    summarizing: "正在说明…",
+    summaryNote: "这段白话由 Grok 根据市政府记录改写，没有添加新事实。",
     viewDetails: "查看详情",
   },
   es: {
@@ -1164,6 +1179,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "Para parar los mensajes, responda STOP desde su teléfono.",
     team: "Equipo",
     ulurpNumbers: "Números ULURP",
+    showCity: "Texto de la ciudad",
+    showSummary: "Versión sencilla",
+    summarize: "Resumir",
+    summarizing: "Resumiendo…",
+    summaryNote: "Lenguaje sencillo de Grok, solo con el registro de la ciudad. No añade datos.",
     viewDetails: "Ver detalles",
   },
   fr: {
@@ -1206,6 +1226,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "Pour arrêter les messages, répondez STOP depuis votre téléphone.",
     team: "Équipe",
     ulurpNumbers: "Numéros ULURP",
+    showCity: "Texte de la ville",
+    showSummary: "Version simple",
+    summarize: "Résumer",
+    summarizing: "Résumé en cours…",
+    summaryNote: "Langage simple par Grok, à partir du dossier de la ville uniquement. Aucun fait ajouté.",
     viewDetails: "Voir le détail",
   },
   ja: {
@@ -1248,6 +1273,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "短信を止めるには、電話から STOP と返信してください。",
     team: "チーム",
     ulurpNumbers: "ULURP番号",
+    showCity: "市の原文",
+    showSummary: "平易な説明",
+    summarize: "わかりやすく",
+    summarizing: "要約しています…",
+    summaryNote: "Grok が市の記録だけを使って書いた平易な説明です。新しい事実は加えていません。",
     viewDetails: "詳しく見る",
   },
   hi: {
@@ -1290,6 +1320,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "संदेश बंद करने के लिए फ़ोन से STOP लिखें।",
     team: "टीम",
     ulurpNumbers: "ULURP नंबर",
+    showCity: "शहर का मूल पाठ",
+    showSummary: "सरल रूप",
+    summarize: "सरल करें",
+    summarizing: "सरल किया जा रहा है…",
+    summaryNote: "Grok ने केवल शहर के रिकॉर्ड से यह सरल भाषा लिखी है। कोई नई बात नहीं जोड़ी गई।",
     viewDetails: "विवरण देखें",
   },
   ar: {
@@ -1332,6 +1367,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "لإيقاف الرسائل، أرسل STOP من هاتفك.",
     team: "الفريق",
     ulurpNumbers: "أرقام ULURP",
+    showCity: "نص المدينة",
+    showSummary: "النسخة المبسطة",
+    summarize: "لخّص",
+    summarizing: "جارٍ التلخيص…",
+    summaryNote: "لغة مبسطة من Grok اعتمادًا على سجل المدينة فقط. لا يضيف حقائق.",
     viewDetails: "عرض التفاصيل",
   },
   ru: {
@@ -1374,6 +1414,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "Чтобы остановить сообщения, ответьте STOP с телефона.",
     team: "Команда",
     ulurpNumbers: "Номера ULURP",
+    showCity: "Текст города",
+    showSummary: "Простая версия",
+    summarize: "Объяснить проще",
+    summarizing: "Готовим объяснение…",
+    summaryNote: "Простой текст от Grok только по записи города. Новых фактов нет.",
     viewDetails: "Подробнее",
   },
 };

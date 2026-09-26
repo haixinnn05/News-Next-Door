@@ -1,7 +1,7 @@
+import type { ReactNode } from "react";
 import { useLang, type Key } from "../lib/i18n";
 import { storyDate, type Story, type Topic } from "../lib/story";
 import { Link } from "../lib/router";
-import type { ReactNode } from "react";
 
 const TOPIC: Record<Topic, Key> = {
   housing: "housing",
@@ -69,7 +69,7 @@ export function NewsFeed({
   );
 }
 
-export function NewsArticle({ story, glance, body, actions }: { story: Story; glance?: { label: string; value: string | null }[]; body?: string | null; actions?: ReactNode }) {
+export function NewsArticle({ story, glance, body, actions }: { story: Story; glance?: { label: string; value: string | null }[]; body?: ReactNode; actions?: ReactNode }) {
   const { t, lang } = useLang();
   const date = storyDate(story.date, lang);
   return (
@@ -84,7 +84,7 @@ export function NewsArticle({ story, glance, body, actions }: { story: Story; gl
       <h1>{story.headline}</h1>
       {date && <p className="news-meta">{date}</p>}
       {story.location && <p className="news-place">{story.location}</p>}
-      {body && <p className="news-body">{body}</p>}
+      {body}
       {glance && glance.length > 0 && (
         <aside className="news-glance">
           <h2>{t("atAGlance")}</h2>
