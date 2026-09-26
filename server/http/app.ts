@@ -7,7 +7,7 @@ import { config } from "../config.ts";
 import { all, get, run, type Db } from "../db.ts";
 import { BOARD } from "../lib/addresses.ts";
 import { HttpError, newId, nowIso, nycToUtcIso } from "../lib/util.ts";
-import { myProposals, setSaved } from "../services/account.ts";
+import { myProposals, setSaved, getZone, setZone, setName, getLangs, setLangs } from "../services/account.ts";
 import * as audio from "../services/audio.ts";
 import { fetchRemote, getDocument, getPages, importDocument, type DocumentRow } from "../services/documents.ts";
 import { extractDocument, extractionPrompt, importPastedExtraction, getDraft, listDrafts, saveDraft, CATEGORIES, EVENT_TYPES, STAGE_KINDS, type DraftRow } from "../services/extraction.ts";
@@ -77,6 +77,35 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
   );
 
   // ------------------------------------------------------------ signed-in residents
+  app.get("/api/me/zone", async (c) => {
+    const user = await requireUser(c);
+    return c.json({ board_id: getZone(db, user.id) });
+  });
+  app.put("/api/me/zone", async (c) => {
+    const user = await requireUser(c);
+    const body = await c.req.json().catch(() => ({}));
+    const boardId = typeof body.board_id === "string" ? body.board_id : "";
+    setZone(db, user.id, boardId);
+    return c.json({ board_id: boardId });
+  });
+
+  app.get("/api/me/langs", async (c) => {
+    const user = await requireUser(c);
+    return c.json({ langs: getLangs(db, user.id) });
+  });
+  app.put("/api/me/langs", async (c) => {
+    const user = await requireUser(c);
+    const body = await c.req.json().catch(() => ({}));
+    return c.json({ langs: setLangs(db, user.id, body.langs) });
+  });
+
+  app.put("/api/me/profile", async (c) => {
+    const user = await requireUser(c);
+    const body = await c.req.json().catch(() => ({}));
+    const name = typeof body.name === "string" ? body.name : "";
+    return c.json({ name: setName(db, user.id, name) });
+  });
+
   app.get("/api/me/proposals", async (c) => {
     const user = await requireUser(c);
     return c.json(await myProposals(db, user.id, maskHandle));

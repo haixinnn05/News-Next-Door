@@ -1,8 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useAccount } from "../lib/account";
+import { LangChecks } from "./LangChecks";
+import { PENDING_LANGS, PENDING_ZONE, useAccount } from "../lib/account";
 import { authClient, residentGoogleSignIn } from "../lib/auth";
-import { useLang } from "../lib/i18n";
+import { useBoard } from "../lib/board";
+import { useLang, type Lang } from "../lib/i18n";
 import { useMeta } from "../lib/meta";
+import { zhBoardShort, zhBorough } from "../lib/zhCivic";
 import { Icon } from "./Icon";
 
 function GoogleGlyph() {
@@ -16,14 +19,106 @@ function GoogleGlyph() {
   );
 }
 
-export function SignInModal() {
+function ZoneSelect({ id, value, onChange }: { id: string; value: string; onChange: (id: string) => void }) {
+  const { t, lang } = useLang();
+  const { boards } = useBoard();
+  return (
+    <div className="field">
+      <label htmlFor={id}>{t("chooseZone")}</label>
+      <select id={id} className="input" required value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{t("chooseZone")}</option>
+        {["Queens", "Brooklyn", "Manhattan"].map((borough) => (
+          <optgroup key={borough} label={zhBorough(borough, lang)}>
+            {boards
+              .filter((b) => b.borough === borough)
+              .map((b) => (
+                <option key={b.id} value={b.id}>
+                  {zhBoardShort(b, lang)}
+                </option>
+              ))}
+          </optgroup>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function ZoneStep() {
   const { t } = useLang();
+  const { zoneId, saveZone, closeZone, signOut } = useAccount();
+  const [zone, setZone] = useState(zoneId ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canClose = !!zoneId;
+
+  useEffect(() => {
+    if (!canClose) return;
+    const on = (e: KeyboardEvent) => e.key === "Escape" && closeZone();
+    addEventListener("keydown", on);
+    return () => removeEventListener("keydown", on);
+  }, [canClose, closeZone]);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!zone) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await saveZone(zone);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("signInFailed"));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-back" onClick={() => canClose && closeZone()}>
+      <div className="modal auth-modal" role="dialog" aria-modal="true" aria-label={t("chooseZone")} onClick={(e) => e.stopPropagation()}>
+        <div className="m-head">
+          <h3>{t("chooseZone")}</h3>
+          {canClose && (
+            <button className="auth-close" onClick={closeZone} aria-label="Close">
+              <Icon name="x" size={20} />
+            </button>
+          )}
+        </div>
+        <div className="signin-body">
+          <p>{t("chooseZoneWhy")}</p>
+          {error && (
+            <div className="banner red">
+              <Icon name="alert" size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+          <form className="signin-form" onSubmit={submit}>
+            <ZoneSelect id="si-zone-pick" value={zone} onChange={setZone} />
+            <button className="news-cta block" disabled={busy || !zone}>
+              {t("chooseZone")}
+            </button>
+          </form>
+          {!canClose && (
+            <p className="signin-switch">
+              <button type="button" onClick={() => void signOut()}>
+                {t("signOut")}
+              </button>
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SignInModal() {
+  const { t, lang } = useLang();
   const meta = useMeta();
-  const { signInError, closeSignIn } = useAccount();
-  const [mode, setMode] = useState<"signin" | "create">("signin");
+  const { signInError, closeSignIn, saveZone, saveLangs, zoneOpen, user, signInOpen, signInMode } = useAccount();
+  const [mode, setMode] = useState<"signin" | "create">(signInMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [zone, setZone] = useState("");
+  const [picked, setPicked] = useState<Lang[]>([lang]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(signInError === "oauth" ? t("signInFailed") : signInError);
 
@@ -32,6 +127,8 @@ export function SignInModal() {
     addEventListener("keydown", on);
     return () => removeEventListener("keydown", on);
   }, [closeSignIn]);
+
+  if (zoneOpen && user && !signInOpen) return <ZoneStep />;
 
   const google = async () => {
     setBusy(true);
@@ -47,12 +144,23 @@ export function SignInModal() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    if (mode === "create") {
+      if (!zone) {
+        setError(t("chooseZone"));
+        setBusy(false);
+        return;
+      }
+      await saveZone(zone);
+      await saveLangs(picked);
+    }
     const { error: err } =
       mode === "create"
         ? await authClient.signUp.email({ name: name.trim() || email.split("@")[0], email: email.trim(), password })
         : await authClient.signIn.email({ email: email.trim(), password });
     setBusy(false);
     if (err) {
+      sessionStorage.removeItem(PENDING_ZONE);
+      sessionStorage.removeItem(PENDING_LANGS);
       setError(err.message ?? t("signInFailed"));
       return;
     }
@@ -62,15 +170,15 @@ export function SignInModal() {
   const creating = mode === "create";
   return (
     <div className="modal-back" onClick={closeSignIn}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={creating ? t("createTitle") : t("signInTitle")} onClick={(e) => e.stopPropagation()}>
+      <div className="modal auth-modal" role="dialog" aria-modal="true" aria-label={creating ? t("createTitle") : t("signInTitle")} onClick={(e) => e.stopPropagation()}>
         <div className="m-head">
-          <h3 style={{ margin: 0, fontSize: 16 }}>{creating ? t("createTitle") : t("signInTitle")}</h3>
-          <button className="btn ghost sm" onClick={closeSignIn} aria-label="Close">
-            <Icon name="x" size={16} />
+          <h3>{creating ? t("createTitle") : t("signIn")}</h3>
+          <button className="auth-close" onClick={closeSignIn} aria-label="Close">
+            <Icon name="x" size={20} />
           </button>
         </div>
         <div className="signin-body">
-          <p className="small muted">{t("signInWhy")}</p>
+          <p>{creating ? t("signInWhy") : t("signInForNews")}</p>
           {error && (
             <div className="banner red">
               <Icon name="alert" size={16} />
@@ -79,7 +187,7 @@ export function SignInModal() {
           )}
           {meta?.account_sign_in.google && (
             <>
-              <button type="button" className="btn block" disabled={busy} onClick={() => void google()}>
+              <button type="button" className="auth-google" disabled={busy} onClick={() => void google()}>
                 <GoogleGlyph /> {t("continueGoogle")}
               </button>
               <div className="signin-or">
@@ -112,15 +220,21 @@ export function SignInModal() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <button className="btn primary block" disabled={busy}>
+            {creating && <ZoneSelect id="si-zone" value={zone} onChange={setZone} />}
+            {creating && (
+              <div className="field">
+                <span className="label">{t("yourLanguages")}</span>
+                <LangChecks value={picked} onChange={setPicked} />
+              </div>
+            )}
+            <button className="news-cta block" disabled={busy}>
               {creating ? t("createAccount") : t("signIn")}
             </button>
           </form>
-          <p className="small muted signin-switch">
+          <p className="signin-switch">
             {creating ? t("haveAccount") : t("noAccount")}{" "}
             <button
               type="button"
-              className="link"
               onClick={() => {
                 setMode(creating ? "signin" : "create");
                 setError(null);

@@ -12,13 +12,14 @@ import { Discover } from "./pages/Discover";
 import { About, HowItWorks } from "./pages/Info";
 import { MyProposals } from "./pages/MyProposals";
 import { Phone } from "./pages/Phone";
+import { Profile } from "./pages/Profile";
 import { ProposalPage } from "./pages/Proposal";
 
 const AdminApp = lazy(() => import("./admin/AdminApp").then((m) => ({ default: m.AdminApp })));
 
 function Routes() {
   const { path } = useRouter();
-  const { signInOpen } = useAccount();
+  const { signInOpen, zoneOpen } = useAccount();
   if (path.startsWith("/admin"))
     return (
       <Suspense fallback={null}>
@@ -35,6 +36,7 @@ function Routes() {
   else if (path === "/about") page = <About />;
   else if (path === "/how-it-works") page = <HowItWorks />;
   else if (path === "/me") page = <MyProposals />;
+  else if (path === "/profile") page = <Profile />;
   else
     page = (
       <div className="container page">
@@ -50,7 +52,7 @@ function Routes() {
         <main>{page}</main>
         <Footer />
       </div>
-      {signInOpen && <SignInModal />}
+      {(signInOpen || zoneOpen) && <SignInModal />}
     </div>
   );
 }

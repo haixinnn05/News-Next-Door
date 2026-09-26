@@ -152,6 +152,9 @@ type ExtraKey =
   | "appLede"
   | "ceqrNumber"
   | "certifiedDate"
+  | "changeZone"
+  | "chooseZone"
+  | "chooseZoneWhy"
   | "communityBoard"
   | "continueGoogle"
   | "councilDistrict"
@@ -163,6 +166,7 @@ type ExtraKey =
   | "followingEmpty"
   | "followingSection"
   | "haveAccount"
+  | "languagesWhy"
   | "linkedPhones"
   | "myProposals"
   | "myProposalsSub"
@@ -172,6 +176,8 @@ type ExtraKey =
   | "orEmail"
   | "password"
   | "passwordHint"
+  | "profile"
+  | "profileSaved"
   | "removedToast"
   | "save"
   | "saved"
@@ -182,7 +188,12 @@ type ExtraKey =
   | "signInFailed"
   | "signInTitle"
   | "signInToSee"
+  | "signInForNews"
   | "signInWhy"
+  | "welcome1"
+  | "welcome2"
+  | "welcome3"
+  | "yourLanguages"
   | "signOut"
   | "stopHint"
   | "team"
@@ -1075,7 +1086,18 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     signInFailed: "Sign-in didn't go through. Please try again.",
     signInTitle: "Sign in to News Next Door",
     signInToSee: "Sign in to see what you saved and follow.",
-    signInWhy: "Save stories and see what you follow in one place. You can still read without an account.",
+    changeZone: "Change zone",
+    chooseZone: "Your zone",
+    chooseZoneWhy: "Pick where you live. You only see news from that zone.",
+    signInForNews: "Sign in and pick your zone. Then you only see news from there.",
+    welcome1: "Create an account",
+    welcome2: "Pick your zone",
+    welcome3: "See news from that zone only",
+    yourLanguages: "Your languages",
+    languagesWhy: "Pick every language you want. Then use the list at the bottom to switch.",
+    signInWhy: "Create an account and pick your zone. You will only see news from that zone.",
+    profile: "Profile",
+    profileSaved: "Saved",
     signOut: "Sign out",
     stopHint: "To stop texts, reply STOP from your phone.",
     team: "Team",
@@ -1117,7 +1139,18 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     signInFailed: "登录未成功，请重试。",
     signInTitle: "登录 News Next Door",
     signInToSee: "登录后即可查看您保存和关注的提案。",
-    signInWhy: "保存提案，并在一处查看您关注的内容。没有账户也可以浏览。",
+    changeZone: "换地区",
+    chooseZone: "你的地区",
+    chooseZoneWhy: "选你住的地方。你只会看到那里的新闻。",
+    signInForNews: "先登录，再选你的地区。然后你只看到那里的新闻。",
+    welcome1: "创建账户",
+    welcome2: "选择你的地区",
+    welcome3: "只看那里的新闻",
+    yourLanguages: "你的语言",
+    languagesWhy: "勾选你要的语言。再用底部的列表切换。",
+    signInWhy: "创建账户并选择你的地区。你只会看到那里的新闻。",
+    profile: "个人资料",
+    profileSaved: "已保存",
     signOut: "退出登录",
     stopHint: "如需停止短信，请用手机回复 STOP。",
     team: "团队",
@@ -1159,7 +1192,18 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     signInFailed: "No se pudo entrar. Inténtelo de nuevo.",
     signInTitle: "Entrar a News Next Door",
     signInToSee: "Entre para ver lo que guardó y sigue.",
-    signInWhy: "Guarde noticias y vea lo que sigue en un solo lugar. Puede leer sin cuenta.",
+    changeZone: "Cambiar zona",
+    chooseZone: "Tu zona",
+    chooseZoneWhy: "Elige dónde vives. Solo verás noticias de esa zona.",
+    signInForNews: "Entra y elige tu zona. Solo verás noticias de ahí.",
+    welcome1: "Crea una cuenta",
+    welcome2: "Elige tu zona",
+    welcome3: "Mira solo las noticias de ahí",
+    yourLanguages: "Tus idiomas",
+    languagesWhy: "Marca todos los idiomas que quieras. Luego usa la lista de abajo para cambiar.",
+    signInWhy: "Crea una cuenta y elige tu zona. Solo verás noticias de esa zona.",
+    profile: "Perfil",
+    profileSaved: "Guardado",
     signOut: "Salir",
     stopHint: "Para parar los mensajes, responda STOP desde su teléfono.",
     team: "Equipo",
@@ -1201,7 +1245,18 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     signInFailed: "La connexion n'a pas marché. Réessayez.",
     signInTitle: "Connexion à News Next Door",
     signInToSee: "Connectez-vous pour voir ce que vous gardez et suivez.",
-    signInWhy: "Gardez des nouvelles et voyez ce que vous suivez au même endroit. Vous pouvez lire sans compte.",
+    changeZone: "Changer de zone",
+    chooseZone: "Votre zone",
+    chooseZoneWhy: "Choisissez où vous vivez. Vous ne verrez que les nouvelles de cette zone.",
+    signInForNews: "Connectez-vous et choisissez votre zone. Vous ne verrez que ses nouvelles.",
+    welcome1: "Créez un compte",
+    welcome2: "Choisissez votre zone",
+    welcome3: "Voyez seulement les nouvelles de cette zone",
+    yourLanguages: "Vos langues",
+    languagesWhy: "Cochez toutes les langues que vous voulez. Puis changez avec la liste en bas.",
+    signInWhy: "Créez un compte et choisissez votre zone. Vous ne verrez que les nouvelles de cette zone.",
+    profile: "Profil",
+    profileSaved: "Enregistré",
     signOut: "Déconnexion",
     stopHint: "Pour arrêter les messages, répondez STOP depuis votre téléphone.",
     team: "Équipe",
@@ -1243,7 +1298,18 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     signInFailed: "ログインできませんでした。もう一度お試しください。",
     signInTitle: "News Next Door にログイン",
     signInToSee: "ログインすると、保存とフォローが見られます。",
-    signInWhy: "記事を保存し、フォローを一か所で見られます。アカウントなしでも読めます。",
+    changeZone: "地域を変える",
+    chooseZone: "あなたの地域",
+    chooseZoneWhy: "住んでいる場所を選んでください。その地域のニュースだけが表示されます。",
+    signInForNews: "ログインして地域を選ぶと、その地域のニュースだけが表示されます。",
+    welcome1: "アカウントを作る",
+    welcome2: "地域を選ぶ",
+    welcome3: "その地域のニュースだけ見る",
+    yourLanguages: "使う言語",
+    languagesWhy: "使いたい言語をすべて選んでください。下のリストで切り替えます。",
+    signInWhy: "アカウントを作り、地域を選んでください。その地域のニュースだけが表示されます。",
+    profile: "プロフィール",
+    profileSaved: "保存しました",
     signOut: "ログアウト",
     stopHint: "短信を止めるには、電話から STOP と返信してください。",
     team: "チーム",
@@ -1285,7 +1351,18 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     signInFailed: "साइन इन नहीं हुआ। फिर कोशिश करें।",
     signInTitle: "News Next Door में साइन इन",
     signInToSee: "सहेजी और फ़ॉलो की हुई चीज़ें देखने के लिए साइन इन करें।",
-    signInWhy: "खबरें सहेजें और फ़ॉलो एक जगह देखें। बिना खाते के भी पढ़ सकते हैं।",
+    changeZone: "इलाका बदलें",
+    chooseZone: "आपका इलाका",
+    chooseZoneWhy: "जहाँ आप रहते हैं, उसे चुनें। आपको सिर्फ़ उसी इलाके की खबरें मिलेंगी।",
+    signInForNews: "साइन इन करें और अपना इलाका चुनें। फिर आपको सिर्फ़ वहीं की खबरें मिलेंगी।",
+    welcome1: "खाता बनाएँ",
+    welcome2: "अपना इलाका चुनें",
+    welcome3: "सिर्फ़ वहीं की खबरें देखें",
+    yourLanguages: "आपकी भाषाएँ",
+    languagesWhy: "जो भाषाएँ चाहिए, सब चुनें। फिर नीचे की सूची से बदलें।",
+    signInWhy: "खाता बनाएँ और अपना इलाका चुनें। आपको सिर्फ़ उसी इलाके की खबरें मिलेंगी।",
+    profile: "प्रोफ़ाइल",
+    profileSaved: "सहेजा गया",
     signOut: "साइन आउट",
     stopHint: "संदेश बंद करने के लिए फ़ोन से STOP लिखें।",
     team: "टीम",
@@ -1327,7 +1404,18 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     signInFailed: "لم يتم الدخول. حاول مرة أخرى.",
     signInTitle: "الدخول إلى News Next Door",
     signInToSee: "ادخل لترى ما حفظته وما تتابعه.",
-    signInWhy: "احفظ الأخبار وشاهد ما تتابعه في مكان واحد. يمكنك القراءة بلا حساب.",
+    changeZone: "تغيير المنطقة",
+    chooseZone: "منطقتك",
+    chooseZoneWhy: "اختر المكان الذي تسكن فيه. ستصلك أخبار تلك المنطقة فقط.",
+    signInForNews: "سجّل الدخول واختر منطقتك. ستصلك أخبارها فقط.",
+    welcome1: "أنشئ حسابًا",
+    welcome2: "اختر منطقتك",
+    welcome3: "شاهد أخبار تلك المنطقة فقط",
+    yourLanguages: "لغاتك",
+    languagesWhy: "اختر كل اللغات التي تريدها. ثم بدّل من القائمة في الأسفل.",
+    signInWhy: "أنشئ حسابًا واختر منطقتك. ستصلك أخبار تلك المنطقة فقط.",
+    profile: "الملف",
+    profileSaved: "تم الحفظ",
     signOut: "خروج",
     stopHint: "لإيقاف الرسائل، أرسل STOP من هاتفك.",
     team: "الفريق",
@@ -1369,7 +1457,18 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     signInFailed: "Вход не прошёл. Попробуйте ещё раз.",
     signInTitle: "Вход в News Next Door",
     signInToSee: "Войдите, чтобы увидеть сохранённое и подписки.",
-    signInWhy: "Сохраняйте новости и смотрите подписки в одном месте. Читать можно без аккаунта.",
+    changeZone: "Сменить район",
+    chooseZone: "Ваш район",
+    chooseZoneWhy: "Выберите, где вы живёте. Вы будете видеть новости только оттуда.",
+    signInForNews: "Войдите и выберите район. Тогда вы будете видеть новости только оттуда.",
+    welcome1: "Создайте аккаунт",
+    welcome2: "Выберите район",
+    welcome3: "Смотрите новости только оттуда",
+    yourLanguages: "Ваши языки",
+    languagesWhy: "Отметьте все нужные языки. Потом переключайте списком внизу.",
+    signInWhy: "Создайте аккаунт и выберите район. Вы будете видеть новости только оттуда.",
+    profile: "Профиль",
+    profileSaved: "Сохранено",
     signOut: "Выйти",
     stopHint: "Чтобы остановить сообщения, ответьте STOP с телефона.",
     team: "Команда",
@@ -1387,6 +1486,12 @@ function text(lang: Lang, k: Key): string {
 
 const ids = new Set<string>(LANGS.map((l) => l.id));
 
+export function parseLangs(raw: unknown, fallback: Lang[] = ["en"]): Lang[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const next = LANGS.map((l) => l.id).filter((id) => list.includes(id));
+  return next.length ? next : fallback;
+}
+
 function storedLang(): Lang {
   try {
     const saved = localStorage.getItem("btv-lang");
@@ -1399,14 +1504,27 @@ function storedLang(): Lang {
   return hit?.id ?? "en";
 }
 
-const LangCtx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: (k: Key) => string }>({
+function storedLangs(current: Lang): Lang[] {
+  try {
+    const raw = localStorage.getItem("btv-langs");
+    if (raw) return parseLangs(JSON.parse(raw), [current]);
+  } catch {
+    /* private mode or bad json */
+  }
+  return [current];
+}
+
+const LangCtx = createContext<{ lang: Lang; langs: Lang[]; setLang: (l: Lang) => void; setLangs: (langs: Lang[]) => void; t: (k: Key) => string }>({
   lang: "en",
+  langs: ["en"],
   setLang: () => {},
+  setLangs: () => {},
   t: (k) => text("en", k),
 });
 
 export function LangProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(storedLang);
+  const [langs, setLangsState] = useState<Lang[]>(() => storedLangs(storedLang()));
   useEffect(() => {
     const meta = LANGS.find((l) => l.id === lang)!;
     document.documentElement.lang = meta.html;
@@ -1416,8 +1534,14 @@ export function LangProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("btv-lang", l);
     setLangState(l);
   };
+  const setLangs = (next: Lang[]) => {
+    const clean = parseLangs(next, [lang]);
+    localStorage.setItem("btv-langs", JSON.stringify(clean));
+    setLangsState(clean);
+    if (!clean.includes(lang)) setLang(clean[0]);
+  };
   const t = (k: Key) => text(lang, k);
-  return <LangCtx.Provider value={{ lang, setLang, t }}>{children}</LangCtx.Provider>;
+  return <LangCtx.Provider value={{ lang, langs, setLang, setLangs, t }}>{children}</LangCtx.Provider>;
 }
 
 export const useLang = () => useContext(LangCtx);

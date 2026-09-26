@@ -1,6 +1,7 @@
 import { config } from "../config.ts";
 import { all, get, run, type Db } from "../db.ts";
 import { HttpError, nowIso } from "../lib/util.ts";
+import { boardById } from "../lib/boards.ts";
 import { getProposal, proposalCard, type ProposalRow } from "./proposals.ts";
 import { applicationById, type ZapApplication } from "./zap.ts";
 
@@ -14,6 +15,58 @@ function snapshotOf(json: string): ZapApplication | null {
     /* stored card is unreadable */
   }
   return null;
+}
+
+export function getZone(db: Db, userId: string): string | null {
+  return get<{ board_id: string }>(db, "SELECT board_id FROM resident_zones WHERE user_id = ?", userId)?.board_id ?? null;
+}
+
+const LANG_IDS = ["en", "zh", "es", "fr", "ja", "hi", "ar", "ru"] as const;
+
+export function getLangs(db: Db, userId: string): string[] | null {
+  const raw = get<{ langs: string }>(db, "SELECT langs FROM resident_langs WHERE user_id = ?", userId)?.langs;
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const next = LANG_IDS.filter((id) => parsed.includes(id));
+    return next.length ? [...next] : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setLangs(db: Db, userId: string, langs: unknown): string[] {
+  const list = Array.isArray(langs) ? langs : [];
+  const next = LANG_IDS.filter((id) => list.includes(id));
+  if (!next.length) throw new HttpError(400, "Pick at least one language.");
+  run(
+    db,
+    "INSERT INTO resident_langs (user_id, langs, updated_at) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET langs = excluded.langs, updated_at = excluded.updated_at",
+    userId,
+    JSON.stringify(next),
+    nowIso(),
+  );
+  return [...next];
+}
+
+export function setName(db: Db, userId: string, name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) throw new HttpError(400, "Name is required.");
+  if (trimmed.length > 80) throw new HttpError(400, "Name is too long.");
+  run(db, "UPDATE user SET name = ? WHERE id = ?", trimmed, userId);
+  return trimmed;
+}
+
+export function setZone(db: Db, userId: string, boardId: string) {
+  if (!boardById(boardId)) throw new HttpError(400, "Unknown zone");
+  run(
+    db,
+    "INSERT INTO resident_zones (user_id, board_id, updated_at) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET board_id = excluded.board_id, updated_at = excluded.updated_at",
+    userId,
+    boardId,
+    nowIso(),
+  );
 }
 
 /** A signed-in resident's saved proposals, plus proposals followed by text from phones linked to the account. */

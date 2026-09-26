@@ -177,6 +177,18 @@ CREATE TABLE IF NOT EXISTS saved_applications (
   PRIMARY KEY (user_id, project_id)
 );
 
+CREATE TABLE IF NOT EXISTS resident_zones (
+  user_id    TEXT PRIMARY KEY,
+  board_id   TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS resident_langs (
+  user_id    TEXT PRIMARY KEY,
+  langs      TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS notifications (
   id                  TEXT PRIMARY KEY,
   delivery_key        TEXT NOT NULL UNIQUE,

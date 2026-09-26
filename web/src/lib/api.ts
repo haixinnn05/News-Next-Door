@@ -33,6 +33,11 @@ export const api = {
   followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "expired" | "unknown" }>(`/api/follow/${code}`),
   simSend: (handle: string, text: string) => request<{ action: string }>("/api/sim/inbound", json("POST", { handle, text })),
   myProposals: () => request<MyProposals>("/api/me/proposals"),
+  zone: () => request<{ board_id: string | null }>("/api/me/zone"),
+  setZone: (boardId: string) => request<{ board_id: string }>("/api/me/zone", json("PUT", { board_id: boardId })),
+  setProfile: (name: string) => request<{ name: string }>("/api/me/profile", json("PUT", { name })),
+  langs: () => request<{ langs: string[] | null }>("/api/me/langs"),
+  setLangs: (langs: string[]) => request<{ langs: string[] }>("/api/me/langs", json("PUT", { langs })),
   setSaved: (id: string, saved: boolean) => request<{ ok: true }>(`/api/me/saved/${encodeURIComponent(id)}`, { method: saved ? "PUT" : "DELETE" }),
   simThread: (handle: string) => request<{ id: number; direction: "to_phone" | "from_phone"; text: string; at: string }[]>(`/api/sim/thread?handle=${encodeURIComponent(handle)}`),
 };
