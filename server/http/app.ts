@@ -439,7 +439,8 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
   });
   admin.post("/audio/:id/generate-zh", async (c) => {
     const { method } = (await c.req.json().catch(() => ({}))) as { method?: string };
-    if (method === "tts_translated") await audio.generateChineseFallback(db, c.req.param("id"));
+    if (method === "tts_page") await audio.generateChineseFromPage(db, c.req.param("id"));
+    else if (method === "tts_translated") await audio.generateChineseFallback(db, c.req.param("id"));
     else await audio.startChineseDub(db, c.req.param("id"));
     return c.json({ ok: true });
   });

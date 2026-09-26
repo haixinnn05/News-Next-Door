@@ -11,6 +11,7 @@ const METHOD_LABEL: Record<string, string> = {
   dubbing: "ElevenLabs Dubbing",
   tts_translated: "Grok translation + ElevenLabs voice",
   tts_translated_cursor: "Grok (in Cursor) translation + ElevenLabs voice",
+  tts_page: "ElevenLabs reading the page's Chinese text",
 };
 
 const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
@@ -99,7 +100,7 @@ function AudioCard({ item, xiEnabled, grokEnabled, reload }: { item: AudioItem; 
     call(`script:${approve}`, () => adminJson("PUT", `${base}/script`, { script, approve }), approve ? "Script approved." : "Script saved.");
   const unapprove = () => call("unapprove", () => adminJson("PUT", `${base}/script`, { script: en.script ?? script, approve: false }), "Script unlocked for editing.");
   const genEn = () => call("gen-en", () => adminJson("POST", `${base}/generate-en`), "English audio ready.");
-  const genZh = (method: "dubbing" | "tts_translated") =>
+  const genZh = (method: "dubbing" | "tts_translated" | "tts_page") =>
     call(`gen-zh:${method}`, () => adminJson("POST", `${base}/generate-zh`, { method }), method === "dubbing" ? "Dubbing started — this can take a minute or two." : "Chinese audio generated.");
   const review = (reviewed: boolean) => call("review", () => adminJson("POST", `${base}/zh-review`, { reviewed }), reviewed ? "Marked as reviewed." : "Marked as not reviewed.");
   const resetZh = () => {
@@ -245,7 +246,7 @@ function ChineseSide({
   xiEnabled: boolean;
   grokEnabled: boolean;
   busy: string | null;
-  genZh: (m: "dubbing" | "tts_translated") => Promise<void>;
+  genZh: (m: "dubbing" | "tts_translated" | "tts_page") => Promise<void>;
   openCursor: () => void;
   review: (r: boolean) => Promise<void>;
   resetZh: () => void;
@@ -257,8 +258,16 @@ function ChineseSide({
       {!enReady && <p className="subtle small">Generate the English audio first — the Chinese version is dubbed from it.</p>}
       {status !== "ready" && (
         <div className="adm-actions left">
-          <button className="btn sm primary" disabled={!canStart || !!busy} onClick={() => void genZh("dubbing")}>
-            {busy === "gen-zh:dubbing" || status === "pending" ? <Spinner /> : <Icon name="globe" size={14} />} Dub to Chinese (ElevenLabs Dubbing)
+          <button
+            className="btn sm primary"
+            disabled={!xiEnabled || status === "pending" || !!busy}
+            onClick={() => void genZh("tts_page")}
+            title="ElevenLabs reads the Chinese title and summary shown on the proposal page. Nothing is translated."
+          >
+            {busy === "gen-zh:tts_page" || status === "pending" ? <Spinner /> : <Icon name="globe" size={14} />} Read the Chinese text on the page
+          </button>
+          <button className="btn sm" disabled={!canStart || !!busy} onClick={() => void genZh("dubbing")} title="ElevenLabs translates the English audio. It can change numbers and addresses, so check it.">
+            {busy === "gen-zh:dubbing" && <Spinner />} Dub to Chinese (ElevenLabs Dubbing)
           </button>
           {grokEnabled && (
             <button className="btn sm" disabled={!canStart || !!busy} onClick={() => void genZh("tts_translated")} title="Translate the approved English script with Grok, then read it with an ElevenLabs voice">

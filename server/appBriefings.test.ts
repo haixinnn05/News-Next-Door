@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { all, get, openMemoryDb } from "./db.ts";
 import { HttpError } from "./lib/util.ts";
-import { appAudioView, appScript, checkAppUpdates, checkVersion, importPastedVersion, queueAppDemoUpdate } from "./services/appBriefings.ts";
+import { appAudioView, appScript, appScriptZh, checkAppUpdates, checkVersion, importPastedVersion, queueAppDemoUpdate } from "./services/appBriefings.ts";
 import type { NotificationRow } from "./services/notifications.ts";
 import { createAppFollowCode, followStatus, handleInbound } from "./services/subscriptions.ts";
 import type { ZapApplication } from "./services/zap.ts";
@@ -107,4 +107,21 @@ test("pasted Grok versions: checked ones are read aloud, flagged ones fall back 
   assert.equal(flagged.status, "flagged");
   assert.equal(appAudioView(db, app()).version, null);
   assert.throws(() => importPastedVersion(db, app(), "{}", null), /simple_en and zh/);
+});
+
+test("Chinese audio reads the page's Chinese description; without one, Chinese visitors get English", () => {
+  const park = app({
+    name: "Queens CD 2 Walk to Park Site Selection/Acq.",
+    brief:
+      "The Department of Parks and Recreation (DPR), along with co-applicant the Department of Citywide Administrative Services (DCAS), seeks approval for the acquisition and site selection (PC) of privately-owned properties for future park development to close the walk to park gap in Community District 2, Queens.",
+  });
+  const zh = appScriptZh(park)!;
+  assert.match(zh, /^皇后区第2社区区“步行到公园”选址与收购。纽约市公园与休憩局/);
+  assert.match(zh, /市政府记录中的状态：公众审议中。/);
+
+  const db = openMemoryDb();
+  assert.equal(appAudioView(db, park).zh_available, true);
+  // a description the page has no Chinese for: nothing to read, so no Chinese audio is made
+  assert.equal(appScriptZh(app()), null);
+  assert.equal(appAudioView(db, app()).zh_available, false);
 });

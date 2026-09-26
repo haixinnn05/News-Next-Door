@@ -3,7 +3,8 @@
  *
  * These projects are not reviewed proposals. Grok rewrites the city's record as Simple English and
  * Chinese; a version is used only when every number, address and date matches the record, and
- * ElevenLabs reads it aloud. Without one, residents hear the city's own wording (and a Chinese dub).
+ * ElevenLabs reads it aloud. Without one, residents hear the city's own wording, and Chinese reads the
+ * Chinese description shown on the page. ElevenLabs only reads text; it never translates.
  * Follow updates fire when the city's status or milestone fields change.
  */
 import crypto from "node:crypto";
@@ -11,7 +12,8 @@ import { z } from "zod";
 import { config } from "../config.ts";
 import { all, get, run, type Db } from "../db.ts";
 import { formatDateOnly, HttpError, newId, nowIso } from "../lib/util.ts";
-import { fetchDubResult, saveFile, startDubJob, tts, type DubJob } from "./audio.ts";
+import { zhCivic, zhTranslated } from "../../web/src/lib/zhCivic.ts";
+import { saveFile, tts } from "./audio.ts";
 import { parseJsonReply } from "./extraction.ts";
 import { grokJson } from "./grok.ts";
 import { appChanges, appConfirmationText, appUpdateText, type AppSnapshot } from "./messages.ts";
@@ -42,6 +44,23 @@ export function appScript(a: ZapApplication): string {
   if (a.applicant) parts.push(sentence(`Applicant: ${a.applicant}`));
   parts.push("This briefing reads New York City Planning's own record. The full record is linked on this page.");
   return parts.join(" ");
+}
+
+const STATUS_ZH: Record<string, string> = { Filed: "已提交", "In Public Review": "公众审议中", Noticed: "已通知" };
+const sentenceZh = (s: string) => (/[。！？.!?]$/.test(s.trim()) ? s.trim() : `${s.trim()}。`);
+
+/**
+ * The Chinese briefing: the Chinese title, description, status and milestone the page shows (zhCivic).
+ * Null when the page has no Chinese description for this record, so Chinese visitors hear English.
+ */
+export function appScriptZh(a: ZapApplication): string | null {
+  if (!a.brief || !zhTranslated(a.brief, "zh")) return null;
+  const parts = [sentenceZh(zhCivic(a.name, "zh")), sentenceZh(zhCivic(a.brief, "zh"))];
+  parts.push(`市政府记录中的状态：${STATUS_ZH[a.public_status] ?? a.public_status}。`);
+  const milestone = a.milestone ? zhCivic(a.milestone, "zh") : null;
+  if (milestone && milestone !== a.milestone) parts.push(`最新进展：${milestone}${a.milestone_date ? `，${formatDateOnly(a.milestone_date, "zh")}` : ""}。`);
+  parts.push("以上内容来自纽约市规划局的官方记录，完整记录的链接在本页。");
+  return parts.join("");
 }
 
 const hashOf = (s: string) => crypto.createHash("sha256").update(s).digest("hex").slice(0, 16);
@@ -233,6 +252,8 @@ export interface AppAudioSide {
 }
 export interface AppAudioView {
   available: boolean;
+  /** False when the page has no Chinese text to read; Chinese visitors then hear English. */
+  zh_available: boolean;
   /** Set when residents hear Grok's checked Simple English / Chinese instead of the city's wording. */
   version: { source: string; model: string | null; simple_en: string; zh: string } | null;
   en: AppAudioSide | null;
@@ -240,16 +261,17 @@ export interface AppAudioView {
 }
 
 /**
- * What each language reads. With a checked Grok version, English reads Simple English and Chinese
- * reads Grok's Chinese (both ElevenLabs voices). Without one, English reads the city's record and
- * Chinese is an ElevenLabs dub of that audio.
+ * What each language reads (ElevenLabs voices; nothing is translated by ElevenLabs). With a checked Grok
+ * version, English reads Simple English and Chinese reads Grok's Chinese. Without one, English reads
+ * the city's record and Chinese reads the page's Chinese description.
  */
 function plan(db: Db, a: ZapApplication) {
   const v = getVersion(db, a);
   const ready = v?.status === "ready" && v.simple_en && v.zh ? v : null;
   const enText = ready?.simple_en ?? appScript(a);
   const en = { text: enText, hash: hashOf(enText), method: ready ? "tts_simple" : "tts" };
-  const zh = ready ? { text: ready.zh as string | null, hash: hashOf(ready.zh!), method: "tts_grok" } : { text: null, hash: en.hash, method: "dubbing" };
+  const zhText = ready?.zh ?? appScriptZh(a);
+  const zh = { text: zhText, hash: zhText ? hashOf(zhText) : "", method: ready ? "tts_grok" : "tts_page" };
   return { version: ready, en, zh };
 }
 
@@ -265,10 +287,11 @@ export function appAudioView(db: Db, a: ZapApplication): AppAudioView {
   const en = side(find(db, a.id, p.en.hash, "en"));
   return {
     available: config.elevenlabs.enabled,
+    zh_available: !!p.zh.text,
     version: p.version ? { source: p.version.source, model: p.version.model, simple_en: p.version.simple_en!, zh: p.version.zh! } : null,
     // while Grok is writing, the English side reads as "being prepared"
     en: pendingVersion ? { status: "pending", url: null, transcript: null, method: "tts_simple" } : en,
-    zh: side(find(db, a.id, p.zh.hash, "zh")),
+    zh: p.zh.text ? side(find(db, a.id, p.zh.hash, "zh")) : null,
   };
 }
 
@@ -319,41 +342,18 @@ export function requestAppAudio(db: Db, a: ZapApplication, lang: "en" | "zh"): A
   const p = plan(db, a);
   const enId = claim(db, a, p.en.hash, "en", p.en.method, p.en.text);
   if (enId) void narrate(db, enId, p.en.text);
-  if (lang === "zh") {
+  if (lang === "zh" && p.zh.text) {
     const zhId = claim(db, a, p.zh.hash, "zh", p.zh.method, p.zh.text);
-    // a Grok version is read directly; otherwise the worker dubs the English audio once it's ready
-    if (zhId && p.zh.text) void narrate(db, zhId, p.zh.text);
+    if (zhId) void narrate(db, zhId, p.zh.text);
   }
   return appAudioView(db, a);
 }
 
-/** Worker tick: start dubs whose English is ready, collect finished dubs, and fail interrupted work. */
+/** Worker tick: fail work that was interrupted (e.g. by a restart) so the next play retries it. */
 export async function pollAppAudio(db: Db): Promise<void> {
   const stale = new Date(Date.now() - 3 * 60_000).toISOString();
   run(db, "UPDATE app_versions SET status='failed', error='Interrupted before Grok replied.', updated_at=? WHERE status='pending' AND updated_at < ?", nowIso(), stale);
-  if (!config.elevenlabs.enabled) return;
-  run(db, "UPDATE app_audio SET status='failed', error='Interrupted before it finished — press play to retry.', updated_at=? WHERE method!='dubbing' AND status='pending' AND updated_at < ?", nowIso(), stale);
-  for (const zh of all<AppAudioRow>(db, "SELECT * FROM app_audio WHERE language='zh' AND method='dubbing' AND status='pending'")) {
-    try {
-      if (!zh.provider_job_json) {
-        const en = find(db, zh.project_id, zh.content_hash, "en");
-        if (en?.status === "failed") run(db, "UPDATE app_audio SET status='failed', error='English audio failed, so there was nothing to dub.', updated_at=? WHERE id=?", nowIso(), zh.id);
-        if (en?.status !== "ready" || !en.file_path) continue;
-        const job = await startDubJob(en.file_path, `before-the-vote zap ${zh.project_id} ${zh.content_hash}`);
-        run(db, "UPDATE app_audio SET provider_job_json=?, updated_at=? WHERE id=?", JSON.stringify(job), nowIso(), zh.id);
-        continue;
-      }
-      const r = await fetchDubResult(JSON.parse(zh.provider_job_json) as DubJob);
-      if (r.state === "failed") run(db, "UPDATE app_audio SET status='failed', error=?, updated_at=? WHERE id=?", r.error, nowIso(), zh.id);
-      if (r.state !== "ready") continue;
-      const fp = saveFile(zh.id, ".flac", r.audio);
-      run(db, "UPDATE app_audio SET status='ready', file_path=?, mime_type='audio/flac', script=?, updated_at=? WHERE id=?", fp, r.transcript, nowIso(), zh.id);
-    } catch (e) {
-      const msg = (e as Error).message;
-      console.warn(`[app-audio] ${zh.id}:`, msg);
-      if (!zh.provider_job_json) run(db, "UPDATE app_audio SET status='failed', error=?, updated_at=? WHERE id=?", msg, nowIso(), zh.id);
-    }
-  }
+  run(db, "UPDATE app_audio SET status='failed', error='Interrupted before it finished — press play to retry.', updated_at=? WHERE status='pending' AND updated_at < ?", nowIso(), stale);
 }
 
 export function getAppAudioFile(db: Db, id: string): { file_path: string; mime_type: string } | undefined {

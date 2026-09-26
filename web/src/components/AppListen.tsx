@@ -8,13 +8,15 @@ import { Icon } from "./Icon";
 /**
  * Audio for a live city application, in the visitor's site language, created the first time anyone asks
  * and then reused. Audio exists only in English and Chinese (to save ElevenLabs credit): Chinese visitors
- * hear Chinese, everyone else hears English. With a checked Grok version, residents hear Simple English
- * and Chinese; without one, English reads NYC Planning's record and Chinese is an ElevenLabs dub of it.
+ * hear Chinese, everyone else hears English. ElevenLabs only reads text aloud: English reads the city's
+ * record (or Grok's checked Simple English), Chinese reads the Chinese description shown on the page (or
+ * Grok's checked Chinese).
  */
 export function AppListen({ id }: { id: string }) {
   const { t, lang: uiLang } = useLang();
-  const lang: "en" | "zh" = uiLang === "zh" ? "zh" : "en";
   const [view, setView] = useState<AppAudioView | null>(null);
+  // Chinese visitors hear English only when the page has no Chinese text to read.
+  const lang: "en" | "zh" = uiLang === "zh" && view?.zh_available !== false ? "zh" : "en";
   const [error, setError] = useState<string | null>(null);
   const asked = useRef(new Set<string>());
 
@@ -47,12 +49,7 @@ export function AppListen({ id }: { id: string }) {
   if (error) note = t("audioFailed");
   else if (view && !view.available) note = t("audioFailed");
   else if (!cur || cur.status === "pending")
-    note =
-      lang === "zh" && !version
-        ? uiLang === "zh"
-          ? "正在用 ElevenLabs 生成中文配音，大约需要 1–2 分钟。"
-          : "ElevenLabs is dubbing this into Chinese. It takes about 1–2 minutes."
-        : t("audioPending");
+    note = t("audioPending");
   else if (cur.status === "failed") note = t("audioFailed");
 
   return (
@@ -95,18 +92,8 @@ export function AppListen({ id }: { id: string }) {
           </div>
         </div>
       )}
-      {!version && lang === "zh" && cur?.status === "ready" && (
-        <div className="transcripts" style={{ marginTop: 14 }}>
-          <div className="transcript">
-            <h3>{t("zhTranscript")}</h3>
-            {cur.transcript && <p className="zh">{cur.transcript}</p>}
-            <div className="gen-note">
-              <Icon name="info" size={15} />
-              {t("generatedTranslation")} <span className="subtle xs">· ElevenLabs Dubbing</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {!version && lang === "zh" && <p className="xs subtle" style={{ margin: "8px 2px 0" }}>ElevenLabs 朗读本页的中文说明。</p>}
+      {uiLang === "zh" && lang === "en" && view && <p className="xs subtle" style={{ margin: "8px 2px 0" }}>此申请暂无中文说明，因此播放英文语音。</p>}
     </div>
   );
 }

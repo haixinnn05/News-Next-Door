@@ -164,6 +164,8 @@ export interface AppAudioSide {
 }
 export interface AppAudioView {
   available: boolean;
+  /** False when the page has no Chinese text to read; Chinese visitors then hear English. */
+  zh_available: boolean;
   /** Grok's Simple English / Chinese, used only after it matched the city's record. Null → the city's own wording. */
   version: { source: string; model: string | null; simple_en: string; zh: string } | null;
   en: AppAudioSide | null;

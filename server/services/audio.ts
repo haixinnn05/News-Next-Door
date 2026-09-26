@@ -209,6 +209,24 @@ export async function pollDubs(db: Db): Promise<void> {
   }
 }
 
+/** Chinese without translation: ElevenLabs reads the Chinese title and summary the proposal page shows. */
+export async function generateChineseFromPage(db: Db, proposalId: string): Promise<void> {
+  const p = getProposal(db, proposalId);
+  if (!p) throw new HttpError(404, "Proposal not found");
+  if (!p.title_zh || !p.summary_zh) throw new HttpError(400, "This proposal has no Chinese title and summary on its page yet.");
+  const zh = ensureRow(db, p, "zh");
+  if (zh.status === "pending") throw new HttpError(409, "A Chinese job is already running.");
+  const script = `${p.title_zh.trim().replace(/[。.]$/, "")}。${p.summary_zh.trim()}官方文件的链接在本页。`;
+  run(db, "UPDATE audio SET status='pending', method='tts_page', error=NULL, provider_job_json=NULL, updated_at=? WHERE id=?", nowIso(), zh.id);
+  try {
+    const fp = saveFile(zh.id, ".mp3", await tts(script));
+    run(db, "UPDATE audio SET status='ready', script=?, file_path=?, mime_type='audio/mpeg', translation_review='unreviewed', updated_at=? WHERE id=?", script, fp, nowIso(), zh.id);
+  } catch (e) {
+    run(db, "UPDATE audio SET status='failed', error=?, updated_at=? WHERE id=?", (e as Error).message, nowIso(), zh.id);
+    throw e;
+  }
+}
+
 /** Fallback when dubbing is unavailable: Grok translates the approved script, ElevenLabs narrates it. */
 export async function generateChineseFallback(db: Db, proposalId: string): Promise<void> {
   const p = getProposal(db, proposalId);
