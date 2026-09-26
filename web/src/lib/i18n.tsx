@@ -122,7 +122,7 @@ const dict = {
   statusReview: ["In public review", "公众审议中"],
   statusNoticed: ["Noticed", "已通知"],
   liveEmpty: ["NYC Planning lists no active Queens CB 2 applications right now.", "纽约市城市规划局目前没有列出皇后区第二社区委员会的进行中申请。"],
-  liveSource: ["Source: NYC Open Data, Zoning Application Portal project data. Map pins are the project's tax lots. Text is in English, as published.", "来源：纽约市开放数据，分区申请门户项目数据。地图标记为项目地块。正文为市政府发布的英文。"],
+  liveSource: ["Source: NYC Open Data, Zoning Application Portal project data. Map pins are the project's tax lots. Text is in English, as published.", "来源：纽约市开放数据，分区申请门户项目数据。地图标记为项目地块。中文说明是生成的翻译，官方记录仍为英文。"],
   livePins: ["Live applications", "现行申请"],
   signIn: ["Sign in", "登录"],
   signOut: ["Sign out", "退出登录"],
@@ -153,6 +153,10 @@ const dict = {
   stopHint: ["To stop texts, reply STOP from your phone.", "如需停止短信，请用手机回复 STOP。"],
   signInToSee: ["Sign in to see your saved and followed proposals.", "登录后即可查看您保存和关注的提案。"],
   followLinked: ["You're signed in, so this follow will appear in My proposals.", "您已登录，此关注将显示在“我的提案”中。"],
+  communityBoard: ["Community board", "社区委员会"],
+  team: ["Team", "团队"],
+  footerBlurb: ["an independent civic prototype. Not affiliated with a community board or the City of New York.", "一个独立的公民原型。与社区委员会或纽约市政府没有隶属关系。"],
+  footerCheck: ["Always check the official document linked on each proposal. Chinese text and audio are generated translations unless marked reviewed.", "请始终核对每项提案所链接的官方文件。中文文字和语音均为生成的翻译，除非标明已经人工核对。"],
 } as const;
 
 export type Key = keyof typeof dict;

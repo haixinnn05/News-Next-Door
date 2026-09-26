@@ -33,6 +33,8 @@ const ACTION_LABELS: Record<string, string> = {
   MM: "City map change",
   HA: "Urban development action",
   LD: "Landmark",
+  HI: "Landmark designation",
+  CS: "Substantial compliance",
 };
 
 export interface ZapRow {

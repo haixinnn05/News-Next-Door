@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "../lib/account";
+import { zhBoardShort, zhBorough } from "../lib/zhCivic";
 import { useBoard } from "../lib/board";
 import { useLang } from "../lib/i18n";
 import { Link, useRouter } from "../lib/router";
@@ -91,16 +92,16 @@ export function Header() {
           ))}
         </nav>
         <div className="header-right">
-          <label className="board-select" title="Covered community board">
-            <span className="sr-only">Community board</span>
-            <select value={board.id} aria-label="Community board" onChange={(e) => setBoard(e.target.value)}>
+          <label className="board-select" title={t("communityBoard")}>
+            <span className="sr-only">{t("communityBoard")}</span>
+            <select value={board.id} aria-label={t("communityBoard")} onChange={(e) => setBoard(e.target.value)}>
               {["Queens", "Brooklyn", "Manhattan"].map((borough) => (
-                <optgroup key={borough} label={borough}>
+                <optgroup key={borough} label={zhBorough(borough, lang)}>
                   {boards
                     .filter((b) => b.borough === borough)
                     .map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.shortName}
+                        {zhBoardShort(b, lang)}
                       </option>
                     ))}
                 </optgroup>
@@ -125,18 +126,19 @@ export function Header() {
 }
 
 export function Footer() {
+  const { t } = useLang();
   return (
     <footer className="footer">
       <div className="container inner">
         <div>
-          <strong style={{ color: "var(--ink)" }}>Before the Vote</strong> — an independent civic prototype. Not affiliated with a community board or the City of New York.
+          <strong style={{ color: "var(--ink)" }}>Before the Vote</strong> — {t("footerBlurb")}
           <br />
-          Always check the official document linked on each proposal. Chinese text and audio are generated translations unless marked reviewed.
+          {t("footerCheck")}
         </div>
         <div className="row" style={{ gap: 18 }}>
-          <Link to="/about">About</Link>
-          <Link to="/how-it-works">How it works</Link>
-          <Link to="/admin">Team</Link>
+          <Link to="/about">{t("about")}</Link>
+          <Link to="/how-it-works">{t("howItWorks")}</Link>
+          <Link to="/admin">{t("team")}</Link>
         </div>
       </div>
     </footer>

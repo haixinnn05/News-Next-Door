@@ -5,6 +5,7 @@ import { useLang, type Key } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { Link } from "../lib/router";
 import type { ZapFeed, ZapPublicStatus } from "../lib/types";
+import { zhCivic } from "../lib/zhCivic";
 
 const STATUS_KEY: Record<ZapPublicStatus, Key> = {
   Filed: "statusFiled",
@@ -79,20 +80,20 @@ export function LiveApplications({
                 <Icon name="chevronRight" size={15} />
               </span>
             </div>
-            <h3>{a.name}</h3>
-            {a.brief && <p>{a.brief}</p>}
+            <h3>{zhCivic(a.name, lang)}</h3>
+            {a.brief && <p>{zhCivic(a.brief, lang)}</p>}
             <div className="live-meta">
-              {a.location && <span>{a.location.label}</span>}
-              <span>{a.districts}</span>
+              {a.location && <span>{zhCivic(a.location.label, lang)}</span>}
+              <span>{zhCivic(a.districts, lang)}</span>
               {a.applicant && (
                 <span>
-                  {t("applicant")}: {a.applicant}
+                  {t("applicant")}: {zhCivic(a.applicant, lang)}
                 </span>
               )}
               {a.milestone && (
                 <span>
                   {t("latestMilestone")}
-                  {a.milestone_date ? ` · ${fmtDate(a.milestone_date, lang)}` : ""}: {a.milestone}
+                  {a.milestone_date ? ` · ${fmtDate(a.milestone_date, lang)}` : ""}: {zhCivic(a.milestone, lang)}
                 </span>
               )}
             </div>

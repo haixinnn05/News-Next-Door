@@ -8,6 +8,7 @@ import { useBoard } from "../lib/board";
 import { useLang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { Link, useRouter } from "../lib/router";
+import { zhBoardName, zhBoardShort, zhBorough, zhNeighborhoods } from "../lib/zhCivic";
 
 export function SearchBar({ initial = "", compact = false, onSearch }: { initial?: string; compact?: boolean; onSearch: (q: string) => void }) {
   const { t } = useLang();
@@ -45,17 +46,17 @@ export function Home() {
             <SearchBar onSearch={(q) => navigate(`/discover${q ? `?q=${encodeURIComponent(q)}` : ""}`)} />
             <div className="coverage-note">
               <Icon name="pin" size={14} />
-              {lang === "zh" ? `${board.name}：${board.neighborhoods.join("、")}` : `${board.name}: ${board.neighborhoods.join(", ")}.`}
+              {lang === "zh" ? `${zhBoardName(board, lang)}：${zhNeighborhoods(board.neighborhoods, lang).join("、")}` : `${board.name}: ${board.neighborhoods.join(", ")}.`}
             </div>
           </div>
           <div className="hero-art">
             <HeroSkyline />
             <div className="hero-note" aria-hidden="true">
-              {board.borough}
+              {zhBorough(board.borough, lang)}
               <br />
-              Community
+              {lang === "zh" ? "第" : "Community"}
               <br />
-              Board {board.number}
+              {lang === "zh" ? `${board.number}社区委员会` : `Board ${board.number}`}
               <svg viewBox="0 0 60 44" fill="none" stroke="#2a2a28" strokeWidth="2" strokeLinecap="round">
                 <path d="M50 4 C 40 20, 28 30, 8 38" />
                 <path d="M8 38 l10 -1 M8 38 l4 -9" />
@@ -66,7 +67,7 @@ export function Home() {
       </section>
 
       <section className="container">
-        <LiveApplications boardId={board.id} boardName={board.shortName} />
+        <LiveApplications boardId={board.id} boardName={zhBoardShort(board, lang)} />
         {reviewed.length > 0 && (
           <>
             <div className="section-head">

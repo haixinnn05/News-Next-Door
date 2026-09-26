@@ -6,10 +6,11 @@ import { useBoard } from "../lib/board";
 import { useLang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { useQuery, useRouter } from "../lib/router";
+import { zhBoardName, zhBoardShort, zhCivic, zhNeighborhoods } from "../lib/zhCivic";
 import { SearchBar } from "./Home";
 
 export function Discover() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { board } = useBoard();
   const query = useQuery();
   const { navigate } = useRouter();
@@ -27,9 +28,9 @@ export function Discover() {
     return list.flatMap((a) => {
       if (!a.location) return [];
       if (needle && ![a.name, a.brief, a.applicant, a.ulurp_numbers, a.districts, a.location.label].some((v) => v?.toLowerCase().includes(needle))) return [];
-      return [{ id: a.id, title: a.name, lat: a.location.lat, lng: a.location.lng, url: `/a/${a.id}` }];
+      return [{ id: a.id, title: zhCivic(a.name, lang), lat: a.location.lat, lng: a.location.lng, url: `/a/${a.id}` }];
     });
-  }, [fresh, q]);
+  }, [fresh, q, lang]);
 
   return (
     <div className="container page">
@@ -37,13 +38,13 @@ export function Discover() {
         <div>
           <h1>{t("findNearYou")}</h1>
           <p className="muted" style={{ margin: "0 0 16px" }}>
-            {board.name}: {board.neighborhoods.join(", ")}.
+            {lang === "zh" ? `${zhBoardName(board, lang)}：${zhNeighborhoods(board.neighborhoods, lang).join("、")}。` : `${board.name}: ${board.neighborhoods.join(", ")}.`}
           </p>
           <SearchBar key={`${board.id}:${q}`} initial={q} compact onSearch={(nq) => navigate(`/discover${nq ? `?q=${encodeURIComponent(nq)}` : ""}`, { replace: true })} />
           {boundary.error && <div className="banner red" style={{ marginTop: 14 }}>{boundary.error}</div>}
-          <LiveApplications boardId={board.id} boardName={board.shortName} query={q} source={apps} hovered={hovered} onHover={setHovered} />
+          <LiveApplications boardId={board.id} boardName={zhBoardShort(board, lang)} query={q} source={apps} hovered={hovered} onHover={setHovered} />
         </div>
-        <CoverageMap proposals={[]} places={places} boundary={outline} areaLabel={board.shortName} hovered={hovered} onHover={setHovered} />
+        <CoverageMap proposals={[]} places={places} boundary={outline} areaLabel={lang === "zh" ? zhBoardName(board, lang) : board.shortName} hovered={hovered} onHover={setHovered} />
       </div>
     </div>
   );

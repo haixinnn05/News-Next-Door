@@ -8,6 +8,7 @@ import { useLang, type Key } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { Link, useRouter } from "../lib/router";
 import type { ZapApplication, ZapPublicStatus } from "../lib/types";
+import { zhCivic, zhTranslated } from "../lib/zhCivic";
 import { SaveButton } from "./Proposal";
 
 const STATUS_KEY: Record<ZapPublicStatus, Key> = {
@@ -35,7 +36,7 @@ function GlanceRow({ icon, label, children }: { icon: IconName; label: string; c
 }
 
 export function ApplicationCard({ a }: { a: ZapApplication }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   return (
     <Link to={`/a/${a.id}`} className="proposal-card">
       <div className="thumb">
@@ -45,8 +46,8 @@ export function ApplicationCard({ a }: { a: ZapApplication }) {
         <div className="top">
           <span className={`chip ${STATUS_CLASS[a.public_status]}`}>{t(STATUS_KEY[a.public_status])}</span>
         </div>
-        <h3>{a.name}</h3>
-        <div className="addr">{a.location?.label ?? a.districts}</div>
+        <h3>{zhCivic(a.name, lang)}</h3>
+        <div className="addr">{zhCivic(a.location?.label ?? a.districts, lang)}</div>
       </div>
     </Link>
   );
@@ -106,8 +107,8 @@ export function ApplicationPage({ id }: { id: string }) {
       <div className="p-head">
         <div>
           <span className={`chip ${STATUS_CLASS[a.public_status]}`}>{t(STATUS_KEY[a.public_status])}</span>
-          <h1>{a.name}</h1>
-          <div className="addr">{a.location?.label ?? a.districts}</div>
+          <h1>{zhCivic(a.name, lang)}</h1>
+          <div className="addr">{zhCivic(a.location?.label ?? a.districts, lang)}</div>
         </div>
       </div>
 
@@ -120,11 +121,12 @@ export function ApplicationPage({ id }: { id: string }) {
             {lang === "zh" ? "插图，非现场照片。" : "Illustration — not a photo of the site."}
           </p>
           <h2>{t("whatIsProposed")}</h2>
-          <p>{a.brief ?? <span className="not-listed">{t("notListed")}</span>}</p>
+          <p>{a.brief ? zhCivic(a.brief, lang) : <span className="not-listed">{t("notListed")}</span>}</p>
+          {zhTranslated(a.brief, lang) && <p className="xs subtle">{t("translationNote")}</p>}
           {a.actions.length > 0 && (
             <>
               <h2 style={{ fontSize: 16 }}>{t("actionsRequested")}</h2>
-              <p>{[...new Set(a.actions.map((action) => action.label))].join(" · ")}</p>
+              <p>{[...new Set(a.actions.map((action) => zhCivic(action.label, lang)))].join(" · ")}</p>
             </>
           )}
           <p className="xs subtle" style={{ marginTop: 18 }}>
@@ -134,8 +136,8 @@ export function ApplicationPage({ id }: { id: string }) {
             <div className="source-item">
               <div className="ic">ZAP</div>
               <div>
-                <div style={{ fontWeight: 600 }}>{a.name}</div>
-                <div className="small subtle">{a.districts}{a.ulurp_numbers ? ` · ${a.ulurp_numbers}` : ""}</div>
+                <div style={{ fontWeight: 600 }}>{zhCivic(a.name, lang)}</div>
+                <div className="small subtle">{zhCivic(a.districts, lang)}{a.ulurp_numbers ? ` · ${a.ulurp_numbers}` : ""}</div>
               </div>
               <a className="btn sm primary" href={a.zap_url} target="_blank" rel="noreferrer">
                 {t("openRecord")} <Icon name="external" size={13} />
@@ -152,7 +154,7 @@ export function ApplicationPage({ id }: { id: string }) {
             <GlanceRow icon="calendar" label={t("latestMilestone")}>
               {a.milestone ? (
                 <>
-                  {a.milestone}
+                  {zhCivic(a.milestone, lang)}
                   {a.milestone_date && <div className="xs subtle" style={{ fontWeight: 500 }}>{fmtDate(a.milestone_date, lang)}</div>}
                 </>
               ) : (
@@ -160,11 +162,11 @@ export function ApplicationPage({ id }: { id: string }) {
               )}
             </GlanceRow>
             <GlanceRow icon="pin" label={t("location")}>
-              {a.location?.label ?? a.districts}
+              {zhCivic(a.location?.label ?? a.districts, lang)}
             </GlanceRow>
             <GlanceRow icon="user" label={t("applicant")}>
-              {a.applicant ?? t("notListed")}
-              {a.applicant_type && <div className="xs subtle" style={{ fontWeight: 500 }}>{a.applicant_type}</div>}
+              {a.applicant ? zhCivic(a.applicant, lang) : t("notListed")}
+              {a.applicant_type && <div className="xs subtle" style={{ fontWeight: 500 }}>{zhCivic(a.applicant_type, lang)}</div>}
             </GlanceRow>
             <GlanceRow icon="building" label={t("councilDistrict")}>
               {a.council_district ?? t("notListed")}
