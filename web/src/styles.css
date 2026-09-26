@@ -360,7 +360,7 @@ img, svg { display: block; }
   .side-nav { position: sticky; top: 0; height: auto; z-index: 40; flex-direction: row; align-items: center; padding: 10px 12px; }
   .side-brand { padding: 0 8px 0 4px; }
   .side-nav nav { display: flex; gap: 4px; }
-  .side-lang { margin-top: 0; margin-left: auto; display: flex; padding: 0; }
+  .side-lang { margin-top: 0; margin-inline-start: auto; display: flex; align-items: center; gap: 8px; padding: 0; }
   .container { width: calc(100% - 32px); }
   .grid-3, .explain-strip { grid-template-columns: 1fr; }
   .site-header .inner { gap: 12px; }
@@ -675,18 +675,25 @@ a.adm-cell-title:hover { text-decoration: underline; }
 .side-nav nav a.on { background: #fff; }
 .side-nav nav a:hover { background: #ececf0; }
 .side-nav nav a.on:hover { background: #fff; }
-.side-lang { margin-top: auto; display: grid; gap: 4px; padding: 8px 6px 0; }
-.side-lang button {
-  border: 0;
-  background: transparent;
-  text-align: left;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 16px;
+.side-lang { margin-top: auto; display: grid; gap: 6px; padding: 12px 8px 0; }
+.side-lang span { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #6e6e73; padding: 0 6px; }
+.side-lang select {
+  width: 100%;
+  appearance: none;
+  font-family: system-ui, -apple-system, "PingFang SC", "Hiragino Sans", "Noto Sans Devanagari", "Geeza Pro", sans-serif;
+  font-size: 18px;
   font-weight: 600;
-  color: #6e6e73;
+  padding: 12px 36px 12px 12px;
+  border-radius: 10px;
+  border: 0;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+  color: #1d1d1f;
 }
-.side-lang button.on { background: #fff; color: #1d1d1f; }
+html[dir="rtl"] .side-lang select { padding: 12px 12px 12px 36px; background-position: left 12px center; }
+@media (max-width: 640px) {
+  .side-lang select { width: auto; max-width: 160px; padding: 8px 32px 8px 10px; font-size: 16px; }
+  html[dir="rtl"] .side-lang select { padding: 8px 10px 8px 32px; }
+}
 
 .discover-news { display: grid; grid-template-columns: minmax(0, 7fr) minmax(280px, 5fr); gap: 8px 20px; align-items: start; padding: 0 20px 28px 0; }
 .discover-news .news { width: auto; max-width: none; margin: 0; padding: 28px 8px 40px 28px; }
@@ -707,7 +714,7 @@ a.adm-cell-title:hover { text-decoration: underline; }
 .news-feature { padding: 18px 0 28px; }
 .news-feature h2, .news-article h1 {
   margin: 8px 0 12px;
-  font-family: "New York", "Iowan Old Style", Palatino, Georgia, serif;
+  font-family: "New York", "Iowan Old Style", Palatino, Georgia, "Songti SC", "Hiragino Mincho ProN", serif, system-ui, sans-serif;
   font-size: clamp(36px, 5vw, 48px);
   line-height: 1.08;
   letter-spacing: -0.03em;
@@ -716,7 +723,7 @@ a.adm-cell-title:hover { text-decoration: underline; }
 .news-row { padding: 26px 0; border-top: 1px solid #e5e5ea; }
 .news-row h3 {
   margin: 8px 0 10px;
-  font-family: "New York", "Iowan Old Style", Palatino, Georgia, serif;
+  font-family: "New York", "Iowan Old Style", Palatino, Georgia, "Songti SC", "Hiragino Mincho ProN", serif, system-ui, sans-serif;
   font-size: 28px;
   line-height: 1.15;
   letter-spacing: -0.02em;

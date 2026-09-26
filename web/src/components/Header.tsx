@@ -1,4 +1,4 @@
-import { useLang } from "../lib/i18n";
+import { LANGS, useLang, type Lang } from "../lib/i18n";
 import { Link, useRouter } from "../lib/router";
 
 export function SideNav() {
@@ -16,23 +16,26 @@ export function SideNav() {
           {t("home")}
         </Link>
       </nav>
-      <div className="side-lang" role="group" aria-label={t("language")}>
-        <button className={lang === "en" ? "on" : ""} aria-pressed={lang === "en"} onClick={() => setLang("en")}>
-          English
-        </button>
-        <button className={lang === "zh" ? "on" : ""} aria-pressed={lang === "zh"} onClick={() => setLang("zh")} lang="zh-Hans">
-          中文
-        </button>
-      </div>
+      <label className="side-lang">
+        <span>{t("language")}</span>
+        <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
+          {LANGS.map((l) => (
+            <option key={l.id} value={l.id} lang={l.html}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      </label>
     </aside>
   );
 }
 
 export function Footer() {
+  const { t } = useLang();
   return (
     <footer className="footer">
       <div className="container inner">
-        <div>News Next Door. News from Queens. Check the city website on each story.</div>
+        <div>{t("footer")}</div>
       </div>
     </footer>
   );

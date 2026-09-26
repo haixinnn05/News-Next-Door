@@ -7,7 +7,7 @@ import { CategoryChip } from "../components/ProposalCard";
 import { useToast } from "../components/Toast";
 import { api } from "../lib/api";
 import { eventTypeLabel, fmtDate, fmtEventWhen, fmtTime, stageLabel, summaryOf, titleOf } from "../lib/format";
-import { useLang } from "../lib/i18n";
+import { useLang, type Lang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { Link, useRouter } from "../lib/router";
 import type { Evidence, ProposalDetail, PublicEvent } from "../lib/types";
@@ -338,7 +338,7 @@ function RefList({ p, refs }: { p: ProposalDetail; refs: Evidence[] }) {
   );
 }
 
-function fieldLabel(field: string, p: ProposalDetail, lang: "en" | "zh"): string {
+function fieldLabel(field: string, p: ProposalDetail, lang: Lang): string {
   if (field.startsWith("event:")) {
     const e = p.events.find((x) => x.key === field.slice(6));
     return e ? e.title : lang === "zh" ? "事件" : "Event";

@@ -29,12 +29,43 @@ export function topicOfApp(a: ZapApplication): Topic {
 
 export function headlineOfApp(a: ZapApplication, lang: Lang): string {
   const street = streetOf(a.location?.label);
-  if (topicOfApp(a) === "parks") {
-    if (!street) return lang === "zh" ? "附近的一座公园" : "A park nearby";
-    return lang === "zh" ? `${street} 的公园` : `A park at ${street}`;
+  const park = topicOfApp(a) === "parks";
+  if (park && !street) {
+    const nearby: Record<Lang, string> = {
+      en: "A park nearby",
+      zh: "附近的一座公园",
+      es: "Un parque cerca",
+      fr: "Un parc tout près",
+      ja: "近くの公園",
+      hi: "पास का एक पार्क",
+      ar: "حديقة قريبة",
+      ru: "Парк рядом",
+    };
+    return nearby[lang];
   }
-  if (street) return lang === "zh" ? `${street} 的建房计划` : `A building plan at ${street}`;
-  return a.name;
+  if (!street) return a.name;
+  const line: Record<Lang, (place: string) => string> = park
+    ? {
+        en: (place) => `A park at ${place}`,
+        zh: (place) => `${place} 的公园`,
+        es: (place) => `Un parque en ${place}`,
+        fr: (place) => `Un parc à ${place}`,
+        ja: (place) => `${place}の公園`,
+        hi: (place) => `${place} पर एक पार्क`,
+        ar: (place) => `حديقة في ${place}`,
+        ru: (place) => `Парк на ${place}`,
+      }
+    : {
+        en: (place) => `A building plan at ${place}`,
+        zh: (place) => `${place} 的建房计划`,
+        es: (place) => `Un plan de construcción en ${place}`,
+        fr: (place) => `Un projet de bâtiment à ${place}`,
+        ja: (place) => `${place}の建設計画`,
+        hi: (place) => `${place} पर एक निर्माण योजना`,
+        ar: (place) => `خطة بناء في ${place}`,
+        ru: (place) => `План строительства на ${place}`,
+      };
+  return line[lang](street);
 }
 
 export function storyFromApp(a: ZapApplication, lang: Lang): Story {
