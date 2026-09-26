@@ -155,6 +155,23 @@ export interface MyProposals {
   applications: ZapApplication[];
 }
 
+/** Audio for a live city application: the city's record read aloud, and an ElevenLabs Chinese dub. */
+export interface AppAudioSide {
+  status: "pending" | "ready" | "failed";
+  url: string | null;
+  transcript: string | null;
+  method: string;
+}
+export interface AppAudioView {
+  available: boolean;
+  /** False when the page has no Chinese text to read; Chinese visitors then hear English. */
+  zh_available: boolean;
+  /** Grok's Simple English / Chinese, used only after it matched the city's record. Null → the city's own wording. */
+  version: { source: string; model: string | null; simple_en: string; zh: string } | null;
+  en: AppAudioSide | null;
+  zh: AppAudioSide | null;
+}
+
 export interface FollowResponse {
   code: string;
   expires_at: string;

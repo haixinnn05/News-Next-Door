@@ -17,8 +17,11 @@ function formatLine(addr: string | null): string | null {
   return addr;
 }
 
-/** Follow via iMessage: short expiring code → resident texts it → confirmed only after the backend processed it. */
-export function FollowPanel({ proposalId, title }: { proposalId: string; title: string }) {
+/**
+ * Follow via iMessage: short expiring code → resident texts it → confirmed only after the backend processed it.
+ * `requestFollow` swaps in another code source (live city applications); the default follows a proposal.
+ */
+export function FollowPanel({ proposalId, title, requestFollow }: { proposalId: string; title: string; requestFollow?: (lang: string) => Promise<FollowResponse> }) {
   const { t, lang } = useLang();
   const toast = useToast();
   const { user } = useAccount();
@@ -31,8 +34,7 @@ export function FollowPanel({ proposalId, title }: { proposalId: string; title: 
   const start = () => {
     setError(null);
     setStatus("waiting");
-    api
-      .follow(proposalId, lang)
+    (requestFollow ? requestFollow(lang) : api.follow(proposalId, lang))
       .then(setF)
       .catch((e: Error) => setError(e.message));
   };
@@ -159,7 +161,17 @@ export function FollowPanel({ proposalId, title }: { proposalId: string; title: 
   );
 }
 
-export function FollowModal({ proposalId, title, onClose }: { proposalId: string; title: string; onClose: () => void }) {
+export function FollowModal({
+  proposalId,
+  title,
+  onClose,
+  requestFollow,
+}: {
+  proposalId: string;
+  title: string;
+  onClose: () => void;
+  requestFollow?: (lang: string) => Promise<FollowResponse>;
+}) {
   const { t } = useLang();
   useEffect(() => {
     const on = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -176,7 +188,7 @@ export function FollowModal({ proposalId, title, onClose }: { proposalId: string
           </button>
         </div>
         <div style={{ padding: "14px 22px 22px" }}>
-          <FollowPanel proposalId={proposalId} title={title} />
+          <FollowPanel proposalId={proposalId} title={title} requestFollow={requestFollow} />
         </div>
       </div>
     </div>

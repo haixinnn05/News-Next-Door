@@ -77,6 +77,61 @@ export function updateText(p: ProposalRow, changes: string[], sourceUrl: string 
     .join("\n");
 }
 
+// ---------------------------------------------------------------- live city applications (ZAP)
+
+/** What a follower of a live application was last told: the city's own status fields. */
+export interface AppSnapshot {
+  name: string;
+  public_status: string;
+  milestone: string | null;
+  milestone_date: string | null;
+}
+
+export const applicationUrl = (id: string) => `${config.publicBaseUrl}/a/${encodeURIComponent(id)}`;
+
+const APP_STATUS_ZH: Record<string, string> = { Filed: "已提交", "In Public Review": "公众审议中", Noticed: "已通知" };
+const appStatus = (s: string, lang: Lang) => (lang === "zh" ? APP_STATUS_ZH[s] ?? s : s);
+const milestoneLine = (a: AppSnapshot, lang: Lang) =>
+  a.milestone ? `${a.milestone}${a.milestone_date ? ` (${formatDateOnly(a.milestone_date, lang)})` : ""}` : lang === "zh" ? "未列出" : "not listed";
+
+export function appConfirmationText(id: string, a: AppSnapshot, zapUrl: string, lang: Lang): string {
+  if (lang === "zh") {
+    return [
+      `News Next Door：您已关注纽约市规划局的申请「${a.name}」。`,
+      `目前状态：${appStatus(a.public_status, lang)}。最新进展：${milestoneLine(a, lang)}。`,
+      "市政府记录的状态或进展有变化时，我们会通知您。",
+      `详情和语音：${applicationUrl(id)}`,
+      `市政府记录：${zapUrl}`,
+      "回复 STOP 取消订阅。",
+    ].join("\n");
+  }
+  return [
+    `News Next Door: You're following the NYC Planning application “${a.name}”.`,
+    `Status: ${a.public_status}. Latest milestone: ${milestoneLine(a, lang)}.`,
+    "We'll text you when the city's record shows a new status or milestone.",
+    `Details & audio: ${applicationUrl(id)}`,
+    `City record: ${zapUrl}`,
+    "Reply STOP to unsubscribe.",
+  ].join("\n");
+}
+
+/** Lines describing what changed between two snapshots; empty when nothing a follower cares about changed. */
+export function appChanges(before: AppSnapshot, after: AppSnapshot, lang: Lang): string[] {
+  const out: string[] = [];
+  if (before.public_status !== after.public_status)
+    out.push(lang === "zh" ? `状态：${appStatus(before.public_status, lang)} → ${appStatus(after.public_status, lang)}` : `Status: ${before.public_status} → ${after.public_status}`);
+  if (before.milestone !== after.milestone || before.milestone_date !== after.milestone_date)
+    out.push(lang === "zh" ? `新进展：${milestoneLine(after, lang)}` : `New milestone: ${milestoneLine(after, lang)}`);
+  return out;
+}
+
+export function appUpdateText(id: string, a: AppSnapshot, changes: string[], zapUrl: string, lang: Lang, demo = false): string {
+  const tag = demo ? "[DEMO — test update, not a real city change] " : "";
+  if (lang === "zh")
+    return [`${tag}更新（News Next Door）：「${a.name}」`, ...changes.map((c) => `• ${c}`), `详情：${applicationUrl(id)}`, `市政府记录：${zapUrl}`, "回复 STOP 取消订阅。"].join("\n");
+  return [`${tag}Update (News Next Door): “${a.name}”`, ...changes.map((c) => `• ${c}`), `Details: ${applicationUrl(id)}`, `City record: ${zapUrl}`, "Reply STOP to unsubscribe."].join("\n");
+}
+
 export const STOP_TEXT = "News Next Door: You're unsubscribed and won't get more messages. 您已取消订阅。To follow again, use Follow on any proposal page.";
 export const HELP_TEXT =
   "News Next Door sends updates about Queens CB2 proposals you follow. To follow one, send the code shown on its page (like QCB2-1234). Reply STOP to unsubscribe. 发送页面上的代码即可关注；回复 STOP 取消订阅。";

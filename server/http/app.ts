@@ -8,13 +8,24 @@ import { all, get, run, type Db } from "../db.ts";
 import { BOARD } from "../lib/addresses.ts";
 import { HttpError, newId, nowIso, nycToUtcIso } from "../lib/util.ts";
 import { myProposals, setSaved, getZone, setZone, setName, getLangs, setLangs } from "../services/account.ts";
+import {
+  appAudioView,
+  getAppAudioFile,
+  importPastedVersion,
+  queueAppDemoUpdate,
+  regenerateVersion,
+  removeVersion,
+  requestAppAudio,
+  versionPrompt,
+  versionView,
+} from "../services/appBriefings.ts";
 import * as audio from "../services/audio.ts";
 import { fetchRemote, getDocument, getPages, importDocument, type DocumentRow } from "../services/documents.ts";
 import { extractDocument, extractionPrompt, importPastedExtraction, getDraft, listDrafts, saveDraft, CATEGORIES, EVENT_TYPES, STAGE_KINDS, type DraftRow } from "../services/extraction.ts";
-import { translateCardToChinese } from "../services/grok.ts";
+import { summarizeApplication, translateCardToChinese } from "../services/grok.ts";
 import { queueTestMessage, reconcileReminders, runDueNotifications, type NotificationRow, type SubscriberRow } from "../services/notifications.ts";
 import { coverage, getProposal, listPublished, proposalCard, proposalDetail, publishDraft, search, type ProposalRow } from "../services/proposals.ts";
-import { createFollowCode, followStatus, handleInbound } from "../services/subscriptions.ts";
+import { createAppFollowCode, createFollowCode, followStatus, handleInbound } from "../services/subscriptions.ts";
 import { BOARDS, boardById, DEFAULT_BOARD_ID } from "../lib/boards.ts";
 import { communityDistrictBoundary } from "../services/boundary.ts";
 import { applicationById, districtApplications } from "../services/zap.ts";
@@ -45,6 +56,15 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
   const { auth } = opts;
   const teamSignIn = config.auth.googleEnabled ? "google" : "token";
   const sessionOf = (c: Context) => auth.api.getSession({ headers: c.req.raw.headers });
+
+  /** What the Follow panel needs: the code, an iMessage link (or the simulator), and a QR code for it. */
+  const followResponse = async (code: string, expires_at: string) => {
+    const line = config.photon.lineAddress;
+    const link = opts.photonEnabled && line ? `sms:${line}&body=${encodeURIComponent(code)}` : `/phone?code=${encodeURIComponent(code)}`;
+    const qrTarget = link.startsWith("/") ? `${config.publicBaseUrl}${link}` : link;
+    const qr_svg = await QRCode.toString(qrTarget, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#14261d", light: "#00000000" } });
+    return { code, expires_at, link, qr_svg, line_address: opts.photonEnabled ? line || null : null, mode: opts.photonEnabled ? "photon" : "simulator" };
+  };
   const requireUser = async (c: Context) => {
     const session = await sessionOf(c);
     if (!session) throw new HttpError(401, "Sign in first.");
@@ -142,6 +162,38 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
 
   app.get("/api/applications/:id", async (c) => c.json(await applicationById(c.req.param("id"))));
 
+  app.post("/api/applications/:id/summarize", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { language?: string };
+    const app = await applicationById(c.req.param("id"));
+    const { summary, model } = await summarizeApplication(
+      {
+        name: app.name,
+        brief: app.brief,
+        public_status: app.public_status,
+        applicant: app.applicant,
+        districts: app.districts,
+        location: app.location?.label ?? null,
+        milestone: app.milestone,
+        actions: app.actions.map((action) => action.label),
+      },
+      body.language || "en",
+    );
+    return c.json({ summary, model });
+  });
+
+  // Live applications: audio that reads the city's record aloud, generated on first request and cached.
+  app.get("/api/applications/:id/audio", async (c) => c.json(appAudioView(db, await applicationById(c.req.param("id")))));
+  app.post("/api/applications/:id/audio", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { language?: string };
+    return c.json(requestAppAudio(db, await applicationById(c.req.param("id")), body.language === "zh" ? "zh" : "en"));
+  });
+  app.post("/api/applications/:id/follow", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { language?: string };
+    const session = await sessionOf(c);
+    const fc = createAppFollowCode(db, await applicationById(c.req.param("id")), body.language === "zh" ? "zh" : "en", session?.user.id ?? null);
+    return c.json(await followResponse(fc.code, fc.expires_at));
+  });
+
   app.get("/api/proposals/:id", (c) => {
     const p = getProposal(db, c.req.param("id"));
     if (!p || !p.published || (p.is_sample && !config.showSampleData)) throw new HttpError(404, "Proposal not found");
@@ -152,15 +204,16 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
     const body = (await c.req.json().catch(() => ({}))) as { language?: string };
     const session = await sessionOf(c);
     const fc = createFollowCode(db, c.req.param("id"), body.language === "zh" ? "zh" : "en", session?.user.id ?? null);
-    const line = config.photon.lineAddress;
-    const link = opts.photonEnabled && line ? `sms:${line}&body=${encodeURIComponent(fc.code)}` : `/phone?code=${encodeURIComponent(fc.code)}`;
-    const qrTarget = link.startsWith("/") ? `${config.publicBaseUrl}${link}` : link;
-    const qr_svg = await QRCode.toString(qrTarget, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#14261d", light: "#00000000" } });
-    return c.json({ code: fc.code, expires_at: fc.expires_at, link, qr_svg, line_address: opts.photonEnabled ? line || null : null, mode: opts.photonEnabled ? "photon" : "simulator" });
+    return c.json(await followResponse(fc.code, fc.expires_at));
   });
 
   app.get("/api/follow/:code", (c) => c.json(followStatus(db, c.req.param("code"))));
 
+  app.get("/media/app-audio/:id", (c) => {
+    const a = getAppAudioFile(db, c.req.param("id"));
+    if (!a) throw new HttpError(404, "Audio not found");
+    return sendFile(c, a.file_path, a.mime_type);
+  });
   app.get("/media/audio/:id", (c) => {
     const a = audio.getAudioFile(db, c.req.param("id"));
     if (!a?.file_path) throw new HttpError(404, "Audio not found");
@@ -368,6 +421,34 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
     const r = reconcileReminders(db, p.id);
     return c.json({ ok: true, starts_at: nycToUtcIso(date, time), reminders_scheduled: r.scheduled });
   });
+  // Live applications: Grok's Simple English + Chinese versions (API, or pasted from Grok in Cursor)
+  admin.get("/applications", async (c) => {
+    const board = boardById(c.req.query("board") || DEFAULT_BOARD_ID);
+    if (!board) throw new HttpError(404, "Unknown community board");
+    const feed = await districtApplications(board);
+    return c.json({
+      board: { id: board.id, name: board.name },
+      grok_api: config.grok.enabled,
+      applications: feed.applications.map((a) => ({ id: a.id, name: a.name, public_status: a.public_status, location: a.location?.label ?? a.districts, version: versionView(db, a) })),
+    });
+  });
+  admin.get("/applications/:id/version-prompt", async (c) => c.json({ prompt: versionPrompt(await applicationById(c.req.param("id"))) }));
+  admin.post("/applications/:id/version-paste", async (c) => {
+    const a = await applicationById(c.req.param("id"));
+    const { json, model } = (await c.req.json()) as { json: string; model?: string };
+    const v = importPastedVersion(db, a, String(json ?? ""), model ?? null);
+    // record English right away; Chinese waits for the first Chinese-language visitor (ElevenLabs credit is limited)
+    if (v.status === "ready" && config.elevenlabs.enabled) requestAppAudio(db, a, "en");
+    return c.json(versionView(db, a));
+  });
+  admin.post("/applications/:id/version-generate", async (c) => c.json(await regenerateVersion(db, await applicationById(c.req.param("id")))));
+  admin.delete("/applications/:id/version", async (c) => {
+    removeVersion(db, await applicationById(c.req.param("id")));
+    return c.json({ ok: true });
+  });
+
+  /** Development-only: a DEMO-labelled update to followers of a live application. */
+  admin.post("/applications/:id/demo-update", (c) => c.json({ queued: queueAppDemoUpdate(db, c.req.param("id")) }));
   admin.delete("/proposals/:id/demo-events", (c) => {
     run(db, "DELETE FROM events WHERE proposal_id=? AND event_key LIKE 'demo_%'", c.req.param("id"));
     reconcileReminders(db, c.req.param("id"));
@@ -387,7 +468,8 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
   });
   admin.post("/audio/:id/generate-zh", async (c) => {
     const { method } = (await c.req.json().catch(() => ({}))) as { method?: string };
-    if (method === "tts_translated") await audio.generateChineseFallback(db, c.req.param("id"));
+    if (method === "tts_page") await audio.generateChineseFromPage(db, c.req.param("id"));
+    else if (method === "tts_translated") await audio.generateChineseFallback(db, c.req.param("id"));
     else await audio.startChineseDub(db, c.req.param("id"));
     return c.json({ ok: true });
   });

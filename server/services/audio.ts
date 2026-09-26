@@ -91,7 +91,7 @@ export function saveScript(db: Db, proposalId: string, script: string, approve: 
   run(db, "UPDATE audio SET script=?, script_approved=?, updated_at=? WHERE id=?", script.trim(), approve ? 1 : 0, nowIso(), row.id);
 }
 
-async function tts(text: string, languageCode?: string): Promise<Buffer> {
+export async function tts(text: string, languageCode?: string): Promise<Buffer> {
   const res = await fetch(`${XI}/text-to-speech/${config.elevenlabs.voiceId}?output_format=mp3_44100_128`, {
     method: "POST",
     headers: xiHeaders({ "Content-Type": "application/json", Accept: "audio/mpeg" }),
@@ -102,7 +102,7 @@ async function tts(text: string, languageCode?: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-function saveFile(id: string, ext: string, buf: Buffer): string {
+export function saveFile(id: string, ext: string, buf: Buffer): string {
   fs.mkdirSync(config.audioDir, { recursive: true });
   const fp = path.join(config.audioDir, `${id}${ext}`);
   fs.writeFileSync(fp, buf);
@@ -126,6 +126,54 @@ export async function generateEnglish(db: Db, proposalId: string): Promise<void>
   }
 }
 
+export interface DubJob {
+  project_id: string;
+  language_id: string;
+}
+
+/** Queue an ElevenLabs Dubbing job that translates an English MP3 into the configured target language. */
+export async function startDubJob(englishMp3Path: string, reference: string): Promise<DubJob> {
+  const form = new FormData();
+  form.append("file", new Blob([fs.readFileSync(englishMp3Path)], { type: "audio/mpeg" }), "briefing-en.mp3");
+  form.append("source_language", "en");
+  form.append("target_language", config.elevenlabs.dubbingTarget);
+  form.append("reference", reference);
+  const res = await fetch(`${XI}/dubbing/project`, { method: "POST", headers: xiHeaders(), body: form, signal: AbortSignal.timeout(120_000) });
+  if (!res.ok) throw new Error(`ElevenLabs dubbing failed (${res.status}): ${await xiError(res)}`);
+  const body = (await res.json()) as { project_id: string; language_ids?: string[] };
+  let languageId = body.language_ids?.[0];
+  if (!languageId) {
+    const lr = await fetch(`${XI}/dubbing/project/${body.project_id}/language`, {
+      method: "POST",
+      headers: xiHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ target_language: config.elevenlabs.dubbingTarget }),
+    });
+    if (!lr.ok) throw new Error(`ElevenLabs language target failed (${lr.status}): ${await xiError(lr)}`);
+    languageId = ((await lr.json()) as { language_id: string }).language_id;
+  }
+  return { project_id: body.project_id, language_id: languageId };
+}
+
+export type DubResult = { state: "pending" } | { state: "failed"; error: string } | { state: "ready"; audio: Buffer; transcript: string | null };
+
+/** Check one dubbing job; when finished, download the FLAC and the translated transcript. */
+export async function fetchDubResult(job: DubJob): Promise<DubResult> {
+  const res = await fetch(`${XI}/dubbing/project/${job.project_id}/language/${job.language_id}`, { headers: xiHeaders() });
+  if (!res.ok) throw new Error(`status ${res.status}: ${await xiError(res)}`);
+  const lang = (await res.json()) as { status: string; outputs?: { lossless_audio?: string | null } | null; error?: { error?: string } | null };
+  if (lang.status === "failed") return { state: "failed", error: `Dubbing failed: ${lang.error?.error ?? "unknown"}` };
+  if (lang.status !== "completed" || !lang.outputs?.lossless_audio) return { state: "pending" };
+  const audio = await fetch(lang.outputs.lossless_audio);
+  if (!audio.ok) throw new Error(`download failed (${audio.status})`);
+  let transcript: string | null = null;
+  const tr = await fetch(`${XI}/dubbing/project/${job.project_id}/language/${job.language_id}/transcript`, { headers: xiHeaders() });
+  if (tr.ok) {
+    const t = (await tr.json()) as { segments: { translation?: string | null }[] };
+    transcript = t.segments.map((s) => s.translation ?? "").join("").trim() || null;
+  }
+  return { state: "ready", audio: Buffer.from(await audio.arrayBuffer()), transcript };
+}
+
 /** Chinese via the ElevenLabs Dubbing API: translate the English audio (asynchronous job). */
 export async function startChineseDub(db: Db, proposalId: string): Promise<void> {
   const p = getProposal(db, proposalId);
@@ -134,27 +182,10 @@ export async function startChineseDub(db: Db, proposalId: string): Promise<void>
   if (!en || en.status !== "ready" || !en.file_path) throw new HttpError(400, "Generate the English audio first — the dub translates it.");
   const zh = ensureRow(db, p, "zh");
   if (zh.status === "pending" || zh.status === "ready") return;
-  const form = new FormData();
-  form.append("file", new Blob([fs.readFileSync(en.file_path)], { type: "audio/mpeg" }), "briefing-en.mp3");
-  form.append("source_language", "en");
-  form.append("target_language", config.elevenlabs.dubbingTarget);
-  form.append("reference", `before-the-vote ${p.id} v${p.version}`);
   run(db, "UPDATE audio SET status='pending', method='dubbing', error=NULL, updated_at=? WHERE id=?", nowIso(), zh.id);
   try {
-    const res = await fetch(`${XI}/dubbing/project`, { method: "POST", headers: xiHeaders(), body: form, signal: AbortSignal.timeout(120_000) });
-    if (!res.ok) throw new Error(`ElevenLabs dubbing failed (${res.status}): ${await xiError(res)}`);
-    const body = (await res.json()) as { project_id: string; language_ids?: string[] };
-    let languageId = body.language_ids?.[0];
-    if (!languageId) {
-      const lr = await fetch(`${XI}/dubbing/project/${body.project_id}/language`, {
-        method: "POST",
-        headers: xiHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ target_language: config.elevenlabs.dubbingTarget }),
-      });
-      if (!lr.ok) throw new Error(`ElevenLabs language target failed (${lr.status}): ${await xiError(lr)}`);
-      languageId = ((await lr.json()) as { language_id: string }).language_id;
-    }
-    run(db, "UPDATE audio SET provider_job_json=?, updated_at=? WHERE id=?", JSON.stringify({ project_id: body.project_id, language_id: languageId }), nowIso(), zh.id);
+    const job = await startDubJob(en.file_path, `before-the-vote ${p.id} v${p.version}`);
+    run(db, "UPDATE audio SET provider_job_json=?, updated_at=? WHERE id=?", JSON.stringify(job), nowIso(), zh.id);
   } catch (e) {
     run(db, "UPDATE audio SET status='failed', error=?, updated_at=? WHERE id=?", (e as Error).message, nowIso(), zh.id);
     throw e;
@@ -166,29 +197,33 @@ export async function pollDubs(db: Db): Promise<void> {
   if (!config.elevenlabs.enabled) return;
   const pending = all<AudioRow>(db, "SELECT * FROM audio WHERE status='pending' AND method='dubbing' AND provider_job_json IS NOT NULL");
   for (const a of pending) {
-    const job = JSON.parse(a.provider_job_json!) as { project_id: string; language_id: string };
     try {
-      const res = await fetch(`${XI}/dubbing/project/${job.project_id}/language/${job.language_id}`, { headers: xiHeaders() });
-      if (!res.ok) throw new Error(`status ${res.status}: ${await xiError(res)}`);
-      const lang = (await res.json()) as { status: string; outputs?: { lossless_audio?: string | null } | null; error?: { error?: string } | null };
-      if (lang.status === "failed") {
-        run(db, "UPDATE audio SET status='failed', error=?, updated_at=? WHERE id=?", `Dubbing failed: ${lang.error?.error ?? "unknown"}`, nowIso(), a.id);
-        continue;
-      }
-      if (lang.status !== "completed" || !lang.outputs?.lossless_audio) continue;
-      const audio = await fetch(lang.outputs.lossless_audio);
-      if (!audio.ok) throw new Error(`download failed (${audio.status})`);
-      const fp = saveFile(a.id, ".flac", Buffer.from(await audio.arrayBuffer()));
-      let transcript: string | null = null;
-      const tr = await fetch(`${XI}/dubbing/project/${job.project_id}/language/${job.language_id}/transcript`, { headers: xiHeaders() });
-      if (tr.ok) {
-        const t = (await tr.json()) as { segments: { translation?: string | null }[] };
-        transcript = t.segments.map((s) => s.translation ?? "").join("").trim() || null;
-      }
-      run(db, "UPDATE audio SET status='ready', file_path=?, mime_type='audio/flac', script=?, translation_review='unreviewed', updated_at=? WHERE id=?", fp, transcript, nowIso(), a.id);
+      const r = await fetchDubResult(JSON.parse(a.provider_job_json!) as DubJob);
+      if (r.state === "failed") run(db, "UPDATE audio SET status='failed', error=?, updated_at=? WHERE id=?", r.error, nowIso(), a.id);
+      if (r.state !== "ready") continue;
+      const fp = saveFile(a.id, ".flac", r.audio);
+      run(db, "UPDATE audio SET status='ready', file_path=?, mime_type='audio/flac', script=?, translation_review='unreviewed', updated_at=? WHERE id=?", fp, r.transcript, nowIso(), a.id);
     } catch (e) {
       console.warn(`[audio] dub poll ${a.id}:`, (e as Error).message);
     }
+  }
+}
+
+/** Chinese without translation: ElevenLabs reads the Chinese title and summary the proposal page shows. */
+export async function generateChineseFromPage(db: Db, proposalId: string): Promise<void> {
+  const p = getProposal(db, proposalId);
+  if (!p) throw new HttpError(404, "Proposal not found");
+  if (!p.title_zh || !p.summary_zh) throw new HttpError(400, "This proposal has no Chinese title and summary on its page yet.");
+  const zh = ensureRow(db, p, "zh");
+  if (zh.status === "pending") throw new HttpError(409, "A Chinese job is already running.");
+  const script = `${p.title_zh.trim().replace(/[。.]$/, "")}。${p.summary_zh.trim()}官方文件的链接在本页。`;
+  run(db, "UPDATE audio SET status='pending', method='tts_page', error=NULL, provider_job_json=NULL, updated_at=? WHERE id=?", nowIso(), zh.id);
+  try {
+    const fp = saveFile(zh.id, ".mp3", await tts(script));
+    run(db, "UPDATE audio SET status='ready', script=?, file_path=?, mime_type='audio/mpeg', translation_review='unreviewed', updated_at=? WHERE id=?", script, fp, nowIso(), zh.id);
+  } catch (e) {
+    run(db, "UPDATE audio SET status='failed', error=?, updated_at=? WHERE id=?", (e as Error).message, nowIso(), zh.id);
+    throw e;
   }
 }
 

@@ -208,10 +208,73 @@ CREATE TABLE IF NOT EXISTS notifications (
   last_error          TEXT,
   sent_at             TEXT,
   is_demo             INTEGER NOT NULL DEFAULT 0,
+  app_subscription_id TEXT,                -- set for messages about a followed live ZAP project
   created_at          TEXT NOT NULL,
   updated_at          TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS notifications_due ON notifications(state, due_at);
+
+-- Audio briefings for live ZAP projects. The script reads the city's own record aloud;
+-- rows are keyed by a hash of that record, so a changed record gets fresh audio.
+CREATE TABLE IF NOT EXISTS app_audio (
+  id                TEXT PRIMARY KEY,
+  project_id        TEXT NOT NULL,
+  content_hash      TEXT NOT NULL,
+  language          TEXT NOT NULL,           -- en | zh
+  script            TEXT,                    -- English script, or the dub's translated transcript
+  status            TEXT NOT NULL,           -- pending | ready | failed
+  method            TEXT NOT NULL,           -- tts | dubbing
+  provider_job_json TEXT,
+  file_path         TEXT,
+  mime_type         TEXT,
+  error             TEXT,
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
+  UNIQUE (project_id, content_hash, language)
+);
+
+-- Grok's plain-English and Chinese versions of a live ZAP record, keyed by the record's hash.
+-- A version is only used when every number, address and date matches the city's record (status 'ready');
+-- otherwise it is 'flagged' and residents hear the city's own wording instead.
+CREATE TABLE IF NOT EXISTS app_versions (
+  project_id   TEXT NOT NULL,
+  record_hash  TEXT NOT NULL,
+  status       TEXT NOT NULL,           -- pending | ready | flagged | failed
+  source       TEXT NOT NULL,           -- grok_api | grok_cursor
+  model        TEXT,
+  simple_en    TEXT,
+  zh           TEXT,
+  issues_json  TEXT NOT NULL DEFAULT '[]',
+  error        TEXT,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  PRIMARY KEY (project_id, record_hash)
+);
+
+-- Follows for live ZAP projects, which are not rows in proposals. snapshot_json is the
+-- status and milestone the subscriber was last told about.
+CREATE TABLE IF NOT EXISTS app_follow_codes (
+  code          TEXT PRIMARY KEY,
+  project_id    TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  language      TEXT NOT NULL DEFAULT 'en',
+  created_at    TEXT NOT NULL,
+  expires_at    TEXT NOT NULL,
+  used_at       TEXT,
+  subscription_id TEXT,
+  user_id       TEXT
+);
+
+CREATE TABLE IF NOT EXISTS app_subscriptions (
+  id            TEXT PRIMARY KEY,
+  subscriber_id TEXT NOT NULL REFERENCES subscribers(id),
+  project_id    TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  active        INTEGER NOT NULL DEFAULT 1,
+  created_at    TEXT NOT NULL,
+  checked_at    TEXT,
+  UNIQUE (subscriber_id, project_id)
+);
 
 CREATE TABLE IF NOT EXISTS delivery_log (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,4 +1,4 @@
-import type { Board, DistrictGeometry, FollowResponse, Meta, MyProposals, ProposalDetail, SearchResponse, ZapApplication, ZapFeed } from "./types";
+import type { AppAudioView, Board, DistrictGeometry, FollowResponse, Meta, MyProposals, ProposalDetail, SearchResponse, ZapApplication, ZapFeed } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -28,6 +28,10 @@ export const api = {
   boundary: (boardId: string) => request<{ board_id: string; geometry: DistrictGeometry }>(`/api/boards/${encodeURIComponent(boardId)}/boundary`),
   applications: (boardId: string) => request<ZapFeed>(`/api/applications?board=${encodeURIComponent(boardId)}`),
   application: (id: string) => request<ZapApplication>(`/api/applications/${encodeURIComponent(id)}`),
+  summarize: (id: string, language: string) => request<{ summary: string; model: string }>(`/api/applications/${encodeURIComponent(id)}/summarize`, json("POST", { language })),
+  appAudio: (id: string) => request<AppAudioView>(`/api/applications/${encodeURIComponent(id)}/audio`),
+  requestAppAudio: (id: string, language: "en" | "zh") => request<AppAudioView>(`/api/applications/${encodeURIComponent(id)}/audio`, json("POST", { language })),
+  followApp: (id: string, language: string) => request<FollowResponse>(`/api/applications/${encodeURIComponent(id)}/follow`, json("POST", { language })),
   proposal: (id: string) => request<ProposalDetail>(`/api/proposals/${id}`),
   follow: (id: string, language: string) => request<FollowResponse>(`/api/proposals/${id}/follow`, json("POST", { language })),
   followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "expired" | "unknown" }>(`/api/follow/${code}`),

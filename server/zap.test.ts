@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { summarizeApplication } from "./services/grok.ts";
 import { applicationById, communityDistrictClause, includesDistrict, locateApplications, normalizeZapRows, type ZapRow } from "./services/zap.ts";
 
 const row = (over: Partial<ZapRow>): ZapRow => ({
@@ -45,6 +46,13 @@ test("normalize keeps active public Queens CB2 applications and drops the rest",
   assert.equal(normalizeZapRows([row({ community_district: "K01", project_id: "bk", project_name: "Greenpoint" })], "K01")[0]?.districts, "Brooklyn CB 1");
   assert.match(communityDistrictClause("M04"), /community_district = 'M04'/);
   assert.throws(() => communityDistrictClause("Q02; drop"), /Invalid/);
+});
+
+test("summarizeApplication rejects an unsupported language before calling Grok", async () => {
+  await assert.rejects(
+    () => summarizeApplication({ name: "A rezoning", brief: "A building.", public_status: "Filed", applicant: null, districts: "Queens CB 2", location: null, milestone: null, actions: [] }, "de"),
+    /supported language/,
+  );
 });
 
 test("applicationById rejects ids that are not city project ids", async () => {

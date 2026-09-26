@@ -149,6 +149,7 @@ const en = {
 
 type ExtraKey =
   | "actionsRequested"
+  | "audioEnZhOnly"
   | "appLede"
   | "ceqrNumber"
   | "certifiedDate"
@@ -198,6 +199,11 @@ type ExtraKey =
   | "stopHint"
   | "team"
   | "ulurpNumbers"
+  | "showCity"
+  | "showSummary"
+  | "summarize"
+  | "summarizing"
+  | "summaryNote"
   | "viewDetails";
 
 export type Key = keyof typeof en | ExtraKey;
@@ -1052,6 +1058,7 @@ const ru: Pack = {
 
 const extra: Record<Lang, Record<ExtraKey, string>> = {
   en: {
+    audioEnZhOnly: "Audio is only in English and 中文 for now, so this is the English version.",
     actionsRequested: "Actions requested",
     appLede: "This is the city's own record. The description, status, and dates are what the city published.",
     ceqrNumber: "CEQR number",
@@ -1102,9 +1109,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "To stop texts, reply STOP from your phone.",
     team: "Team",
     ulurpNumbers: "ULURP numbers",
+    showCity: "City wording",
+    showSummary: "Plain version",
+    summarize: "Summarize",
+    summarizing: "Summarizing…",
+    summaryNote: "Plain language by Grok, using only the city's record. It does not add facts.",
     viewDetails: "View details",
   },
   zh: {
+    audioEnZhOnly: "目前语音只有英文和中文。",
     actionsRequested: "申请事项",
     appLede: "这是市政府公布的记录。以下说明、状态和日期都来自市政府。",
     ceqrNumber: "CEQR 编号",
@@ -1155,9 +1168,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "如需停止短信，请用手机回复 STOP。",
     team: "团队",
     ulurpNumbers: "ULURP 编号",
+    showCity: "市政府原文",
+    showSummary: "白话版本",
+    summarize: "用白话说明",
+    summarizing: "正在说明…",
+    summaryNote: "这段白话由 Grok 根据市政府记录改写，没有添加新事实。",
     viewDetails: "查看详情",
   },
   es: {
+    audioEnZhOnly: "Por ahora el audio solo está en inglés y chino, así que esta es la versión en inglés.",
     actionsRequested: "Trámites pedidos",
     appLede: "Este es el registro de la ciudad. La descripción, el estado y las fechas son los que publicó la ciudad.",
     ceqrNumber: "Número CEQR",
@@ -1208,9 +1227,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "Para parar los mensajes, responda STOP desde su teléfono.",
     team: "Equipo",
     ulurpNumbers: "Números ULURP",
+    showCity: "Texto de la ciudad",
+    showSummary: "Versión sencilla",
+    summarize: "Resumir",
+    summarizing: "Resumiendo…",
+    summaryNote: "Lenguaje sencillo de Grok, solo con el registro de la ciudad. No añade datos.",
     viewDetails: "Ver detalles",
   },
   fr: {
+    audioEnZhOnly: "Pour l'instant, l'audio n'existe qu'en anglais et en chinois : voici la version anglaise.",
     actionsRequested: "Démarches demandées",
     appLede: "Ceci est le dossier de la ville. La description, l'état et les dates viennent de la ville.",
     ceqrNumber: "Numéro CEQR",
@@ -1261,9 +1286,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "Pour arrêter les messages, répondez STOP depuis votre téléphone.",
     team: "Équipe",
     ulurpNumbers: "Numéros ULURP",
+    showCity: "Texte de la ville",
+    showSummary: "Version simple",
+    summarize: "Résumer",
+    summarizing: "Résumé en cours…",
+    summaryNote: "Langage simple par Grok, à partir du dossier de la ville uniquement. Aucun fait ajouté.",
     viewDetails: "Voir le détail",
   },
   ja: {
+    audioEnZhOnly: "音声は現在、英語と中国語のみです。英語版を再生します。",
     actionsRequested: "求めている手続き",
     appLede: "これは市が公表した記録です。説明、状態、日付は市の発表です。",
     ceqrNumber: "CEQR番号",
@@ -1314,9 +1345,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "短信を止めるには、電話から STOP と返信してください。",
     team: "チーム",
     ulurpNumbers: "ULURP番号",
+    showCity: "市の原文",
+    showSummary: "平易な説明",
+    summarize: "わかりやすく",
+    summarizing: "要約しています…",
+    summaryNote: "Grok が市の記録だけを使って書いた平易な説明です。新しい事実は加えていません。",
     viewDetails: "詳しく見る",
   },
   hi: {
+    audioEnZhOnly: "अभी ऑडियो केवल अंग्रेज़ी और चीनी में उपलब्ध है, इसलिए यह अंग्रेज़ी संस्करण है।",
     actionsRequested: "माँगे गए कदम",
     appLede: "यह शहर का अपना रिकॉर्ड है। विवरण, स्थिति और तारीखें शहर ने प्रकाशित की हैं।",
     ceqrNumber: "CEQR नंबर",
@@ -1367,9 +1404,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "संदेश बंद करने के लिए फ़ोन से STOP लिखें।",
     team: "टीम",
     ulurpNumbers: "ULURP नंबर",
+    showCity: "शहर का मूल पाठ",
+    showSummary: "सरल रूप",
+    summarize: "सरल करें",
+    summarizing: "सरल किया जा रहा है…",
+    summaryNote: "Grok ने केवल शहर के रिकॉर्ड से यह सरल भाषा लिखी है। कोई नई बात नहीं जोड़ी गई।",
     viewDetails: "विवरण देखें",
   },
   ar: {
+    audioEnZhOnly: "الصوت متاح حاليًا بالإنجليزية والصينية فقط، لذا هذه هي النسخة الإنجليزية.",
     actionsRequested: "الإجراءات المطلوبة",
     appLede: "هذا سجل المدينة. الوصف والحالة والتواريخ هي ما نشرته المدينة.",
     ceqrNumber: "رقم CEQR",
@@ -1420,9 +1463,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "لإيقاف الرسائل، أرسل STOP من هاتفك.",
     team: "الفريق",
     ulurpNumbers: "أرقام ULURP",
+    showCity: "نص المدينة",
+    showSummary: "النسخة المبسطة",
+    summarize: "لخّص",
+    summarizing: "جارٍ التلخيص…",
+    summaryNote: "لغة مبسطة من Grok اعتمادًا على سجل المدينة فقط. لا يضيف حقائق.",
     viewDetails: "عرض التفاصيل",
   },
   ru: {
+    audioEnZhOnly: "Пока аудио есть только на английском и китайском, поэтому это английская версия.",
     actionsRequested: "Запрошенные действия",
     appLede: "Это запись города. Описание, статус и даты опубликованы городом.",
     ceqrNumber: "Номер CEQR",
@@ -1473,6 +1522,11 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     stopHint: "Чтобы остановить сообщения, ответьте STOP с телефона.",
     team: "Команда",
     ulurpNumbers: "Номера ULURP",
+    showCity: "Текст города",
+    showSummary: "Простая версия",
+    summarize: "Объяснить проще",
+    summarizing: "Готовим объяснение…",
+    summaryNote: "Простой текст от Grok только по записи города. Новых фактов нет.",
     viewDetails: "Подробнее",
   },
 };
