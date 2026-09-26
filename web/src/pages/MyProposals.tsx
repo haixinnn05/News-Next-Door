@@ -1,4 +1,5 @@
 import { ProposalCardView } from "../components/ProposalCard";
+import { ApplicationCard } from "./Application";
 import { useAccount } from "../lib/account";
 import { api } from "../lib/api";
 import { useLang } from "../lib/i18n";
@@ -35,8 +36,11 @@ export function MyProposals() {
       </div>
       {!m ? (
         <div className="skeleton" style={{ height: 180 }} />
-      ) : m.saved.length ? (
+      ) : m.saved.length || m.applications.length ? (
         <div className="grid-3">
+          {m.applications.map((a) => (
+            <ApplicationCard key={a.id} a={a} />
+          ))}
           {m.saved.map((p) => (
             <ProposalCardView key={p.id} p={p} />
           ))}

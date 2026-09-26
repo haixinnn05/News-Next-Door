@@ -72,7 +72,7 @@ export function Header() {
     return () => removeEventListener("scroll", on);
   }, []);
   const nav = [
-    { to: "/discover", label: t("discover"), on: path.startsWith("/discover") || path.startsWith("/p/") },
+    { to: "/discover", label: t("discover"), on: path.startsWith("/discover") || path.startsWith("/p/") || path.startsWith("/a/") },
     { to: "/about", label: t("about"), on: path === "/about" },
     { to: "/how-it-works", label: t("howItWorks"), on: path === "/how-it-works" },
   ];

@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { fmtDate } from "../lib/format";
 import { useLang, type Key } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
+import { Link } from "../lib/router";
 import type { ZapFeed, ZapPublicStatus } from "../lib/types";
 
 const STATUS_KEY: Record<ZapPublicStatus, Key> = {
@@ -64,12 +65,10 @@ export function LiveApplications({
       )}
       <div className="live-list">
         {apps.map((a) => (
-          <a
+          <Link
             key={a.id}
             className={`live-card${hovered === a.id ? " hover" : ""}`}
-            href={a.zap_url}
-            target="_blank"
-            rel="noreferrer"
+            to={`/a/${a.id}`}
             onMouseEnter={() => onHover?.(a.id)}
             onMouseLeave={() => onHover?.(null)}
           >
@@ -77,7 +76,7 @@ export function LiveApplications({
               <span className={`chip ${STATUS_CLASS[a.public_status]}`}>{t(STATUS_KEY[a.public_status])}</span>
               {a.ulurp_numbers && <span className="subtle small">{a.ulurp_numbers}</span>}
               <span className="icon-btn" aria-hidden="true">
-                <Icon name="external" size={15} />
+                <Icon name="chevronRight" size={15} />
               </span>
             </div>
             <h3>{a.name}</h3>
@@ -97,8 +96,8 @@ export function LiveApplications({
                 </span>
               )}
             </div>
-            <span className="link xs">{t("openRecord")}</span>
-          </a>
+            <span className="link xs">{t("viewDetails")}</span>
+          </Link>
         ))}
       </div>
       {fresh && <p className="xs subtle" style={{ marginTop: 12 }}>{t("liveSource")}</p>}

@@ -27,7 +27,7 @@ export function Discover() {
     return list.flatMap((a) => {
       if (!a.location) return [];
       if (needle && ![a.name, a.brief, a.applicant, a.ulurp_numbers, a.districts, a.location.label].some((v) => v?.toLowerCase().includes(needle))) return [];
-      return [{ id: a.id, title: a.name, lat: a.location.lat, lng: a.location.lng, url: a.zap_url }];
+      return [{ id: a.id, title: a.name, lat: a.location.lat, lng: a.location.lng, url: `/a/${a.id}` }];
     });
   }, [fresh, q]);
 

@@ -68,7 +68,7 @@ export function CoverageMap({ proposals, places = [], boundary = null, areaLabel
       add(p.id, p.address.lat, p.address.lng, titleOf(p, lang), undefined, () => navigate(`/p/${p.id}`));
     }
     for (const place of places) {
-      add(place.id, place.lat, place.lng, place.title, "#2d3f82", () => window.open(place.url, "_blank", "noopener,noreferrer"));
+      add(place.id, place.lat, place.lng, place.title, "#2d3f82", () => (place.url.startsWith("/") ? navigate(place.url) : window.open(place.url, "_blank", "noopener,noreferrer")));
     }
     outline.current?.remove();
     outline.current = null;

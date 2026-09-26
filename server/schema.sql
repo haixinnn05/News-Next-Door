@@ -167,6 +167,16 @@ CREATE TABLE IF NOT EXISTS saved_proposals (
   PRIMARY KEY (user_id, proposal_id)
 );
 
+-- Live ZAP projects are not rows in proposals, so saves for them live here.
+-- snapshot_json keeps the card if the city list is briefly unavailable.
+CREATE TABLE IF NOT EXISTS saved_applications (
+  user_id       TEXT NOT NULL,
+  project_id    TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  created_at    TEXT NOT NULL,
+  PRIMARY KEY (user_id, project_id)
+);
+
 CREATE TABLE IF NOT EXISTS notifications (
   id                  TEXT PRIMARY KEY,
   delivery_key        TEXT NOT NULL UNIQUE,

@@ -17,7 +17,7 @@ import { coverage, getProposal, listPublished, proposalCard, proposalDetail, pub
 import { createFollowCode, followStatus, handleInbound } from "../services/subscriptions.ts";
 import { BOARDS, boardById, DEFAULT_BOARD_ID } from "../lib/boards.ts";
 import { communityDistrictBoundary } from "../services/boundary.ts";
-import { districtApplications } from "../services/zap.ts";
+import { applicationById, districtApplications } from "../services/zap.ts";
 
 const MIME: Record<string, string> = { ".mp3": "audio/mpeg", ".flac": "audio/flac", ".pdf": "application/pdf", ".html": "text/html; charset=utf-8" };
 
@@ -79,16 +79,16 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
   // ------------------------------------------------------------ signed-in residents
   app.get("/api/me/proposals", async (c) => {
     const user = await requireUser(c);
-    return c.json(myProposals(db, user.id, maskHandle));
+    return c.json(await myProposals(db, user.id, maskHandle));
   });
   app.put("/api/me/saved/:id", async (c) => {
     const user = await requireUser(c);
-    setSaved(db, user.id, c.req.param("id"), true);
+    await setSaved(db, user.id, c.req.param("id"), true);
     return c.json({ ok: true });
   });
   app.delete("/api/me/saved/:id", async (c) => {
     const user = await requireUser(c);
-    setSaved(db, user.id, c.req.param("id"), false);
+    await setSaved(db, user.id, c.req.param("id"), false);
     return c.json({ ok: true });
   });
 
@@ -110,6 +110,8 @@ export function createApp(db: Db, opts: { photonEnabled: boolean; auth: Auth }) 
     if (!board) throw new HttpError(404, "Unknown community board");
     return c.json(await districtApplications(board));
   });
+
+  app.get("/api/applications/:id", async (c) => c.json(await applicationById(c.req.param("id"))));
 
   app.get("/api/proposals/:id", (c) => {
     const p = getProposal(db, c.req.param("id"));

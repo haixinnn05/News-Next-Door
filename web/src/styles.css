@@ -652,7 +652,9 @@ a.adm-cell-title:hover { text-decoration: underline; }
 .live-card { display: block; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; color: inherit; }
 .live-card:hover, .live-card.hover { box-shadow: var(--shadow); border-color: var(--line-strong); }
 .live-card-top { display: flex; align-items: center; gap: 8px; }
-.live-card-top .icon-btn { margin-left: auto; }
+.live-card-top .chip { flex: none; white-space: nowrap; }
+.live-card-top .subtle { min-width: 0; }
+.live-card-top .icon-btn { margin-left: auto; flex: none; }
 .live-card h3 { margin: 8px 0 4px; font-size: 16px; letter-spacing: -0.01em; }
 .live-card p { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
 .live-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 6px; font-size: 12.5px; color: var(--ink-2); }

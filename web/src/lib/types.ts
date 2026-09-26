@@ -152,6 +152,7 @@ export interface MyProposals {
   saved: ProposalCard[];
   following: (ProposalCard & { phone: string })[];
   phones: string[];
+  applications: ZapApplication[];
 }
 
 export interface FollowResponse {

@@ -60,7 +60,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
     api
       .myProposals()
-      .then((m) => setSavedIds(new Set(m.saved.map((p) => p.id))))
+      .then((m) => setSavedIds(new Set([...m.saved.map((p) => p.id), ...m.applications.map((a) => a.id)])))
       .catch(() => {});
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 

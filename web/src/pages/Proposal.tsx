@@ -32,7 +32,7 @@ const FIELD_LABEL: Record<string, [string, string]> = {
   participation: ["How to participate", "参与方式"],
 };
 
-function SaveButton({ proposalId }: { proposalId: string }) {
+export function SaveButton({ proposalId }: { proposalId: string }) {
   const { t } = useLang();
   const toast = useToast();
   const { user, savedIds, setSaved, openSignIn } = useAccount();

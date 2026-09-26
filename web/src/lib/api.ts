@@ -1,4 +1,4 @@
-import type { Board, DistrictGeometry, FollowResponse, Meta, MyProposals, ProposalDetail, SearchResponse, ZapFeed } from "./types";
+import type { Board, DistrictGeometry, FollowResponse, Meta, MyProposals, ProposalDetail, SearchResponse, ZapApplication, ZapFeed } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -27,6 +27,7 @@ export const api = {
   boards: () => request<{ default_id: string; boards: Board[] }>("/api/boards"),
   boundary: (boardId: string) => request<{ board_id: string; geometry: DistrictGeometry }>(`/api/boards/${encodeURIComponent(boardId)}/boundary`),
   applications: (boardId: string) => request<ZapFeed>(`/api/applications?board=${encodeURIComponent(boardId)}`),
+  application: (id: string) => request<ZapApplication>(`/api/applications/${encodeURIComponent(id)}`),
   proposal: (id: string) => request<ProposalDetail>(`/api/proposals/${id}`),
   follow: (id: string, language: string) => request<FollowResponse>(`/api/proposals/${id}/follow`, json("POST", { language })),
   followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "expired" | "unknown" }>(`/api/follow/${code}`),

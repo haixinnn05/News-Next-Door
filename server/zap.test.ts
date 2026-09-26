@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { communityDistrictClause, includesDistrict, locateApplications, normalizeZapRows, type ZapRow } from "./services/zap.ts";
+import { applicationById, communityDistrictClause, includesDistrict, locateApplications, normalizeZapRows, type ZapRow } from "./services/zap.ts";
 
 const row = (over: Partial<ZapRow>): ZapRow => ({
   project_id: "2023Q0177",
@@ -45,6 +45,11 @@ test("normalize keeps active public Queens CB2 applications and drops the rest",
   assert.equal(normalizeZapRows([row({ community_district: "K01", project_id: "bk", project_name: "Greenpoint" })], "K01")[0]?.districts, "Brooklyn CB 1");
   assert.match(communityDistrictClause("M04"), /community_district = 'M04'/);
   assert.throws(() => communityDistrictClause("Q02; drop"), /Invalid/);
+});
+
+test("applicationById rejects ids that are not city project ids", async () => {
+  await assert.rejects(() => applicationById("Q02; drop"), /Application not found/);
+  await assert.rejects(() => applicationById("bk"), /Application not found/);
 });
 
 test("locateApplications pins each project at the centroid of its tax lots", () => {
