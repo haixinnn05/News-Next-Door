@@ -21,6 +21,7 @@ const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
   ["subscribers", "user_id", "TEXT"],
   ["follow_codes", "user_id", "TEXT"],
   ["notifications", "app_subscription_id", "TEXT"],
+  ["subscribers", "language_chosen_at", "TEXT"],
 ];
 
 export function openDb(dbPath = config.dbPath): DatabaseSync {

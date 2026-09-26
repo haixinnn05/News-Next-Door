@@ -91,16 +91,21 @@ export function saveScript(db: Db, proposalId: string, script: string, approve: 
   run(db, "UPDATE audio SET script=?, script_approved=?, updated_at=? WHERE id=?", script.trim(), approve ? 1 : 0, nowIso(), row.id);
 }
 
-export async function tts(text: string, languageCode?: string): Promise<Buffer> {
-  const res = await fetch(`${XI}/text-to-speech/${config.elevenlabs.voiceId}?output_format=mp3_44100_128`, {
+/** Read text aloud: English with the American voice, Chinese with the native Mandarin voice. */
+export async function tts(text: string, lang: "en" | "zh"): Promise<Buffer> {
+  const voice = lang === "zh" ? config.elevenlabs.voiceZh : config.elevenlabs.voiceEn;
+  const res = await fetch(`${XI}/text-to-speech/${voice}?output_format=mp3_44100_128`, {
     method: "POST",
     headers: xiHeaders({ "Content-Type": "application/json", Accept: "audio/mpeg" }),
-    body: JSON.stringify({ text, model_id: config.elevenlabs.ttsModel, ...(languageCode ? { language_code: languageCode } : {}) }),
+    body: JSON.stringify({ text, model_id: config.elevenlabs.ttsModel }),
     signal: AbortSignal.timeout(120_000),
   });
   if (!res.ok) throw new Error(`ElevenLabs TTS failed (${res.status}): ${await xiError(res)}`);
   return Buffer.from(await res.arrayBuffer());
 }
+
+/** Which voice a language uses; part of each audio cache key, so changing a voice re-records. */
+export const voiceFor = (lang: "en" | "zh") => (lang === "zh" ? config.elevenlabs.voiceZh : config.elevenlabs.voiceEn);
 
 export function saveFile(id: string, ext: string, buf: Buffer): string {
   fs.mkdirSync(config.audioDir, { recursive: true });
@@ -117,7 +122,7 @@ export async function generateEnglish(db: Db, proposalId: string): Promise<void>
   if (row.status === "ready") return; // cached per proposal version
   run(db, "UPDATE audio SET status='pending', method='tts', error=NULL, updated_at=? WHERE id=?", nowIso(), row.id);
   try {
-    const buf = await tts(row.script);
+    const buf = await tts(row.script, "en");
     const fp = saveFile(row.id, ".mp3", buf);
     run(db, "UPDATE audio SET status='ready', file_path=?, mime_type='audio/mpeg', updated_at=? WHERE id=?", fp, nowIso(), row.id);
   } catch (e) {
@@ -219,7 +224,7 @@ export async function generateChineseFromPage(db: Db, proposalId: string): Promi
   const script = `${p.title_zh.trim().replace(/[。.]$/, "")}。${p.summary_zh.trim()}官方文件的链接在本页。`;
   run(db, "UPDATE audio SET status='pending', method='tts_page', error=NULL, provider_job_json=NULL, updated_at=? WHERE id=?", nowIso(), zh.id);
   try {
-    const fp = saveFile(zh.id, ".mp3", await tts(script));
+    const fp = saveFile(zh.id, ".mp3", await tts(script, "zh"));
     run(db, "UPDATE audio SET status='ready', script=?, file_path=?, mime_type='audio/mpeg', translation_review='unreviewed', updated_at=? WHERE id=?", script, fp, nowIso(), zh.id);
   } catch (e) {
     run(db, "UPDATE audio SET status='failed', error=?, updated_at=? WHERE id=?", (e as Error).message, nowIso(), zh.id);

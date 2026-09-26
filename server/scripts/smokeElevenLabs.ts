@@ -8,7 +8,7 @@ if (!config.elevenlabs.enabled) {
   process.exit(2);
 }
 ensureDirs();
-const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${config.elevenlabs.voiceId}?output_format=mp3_44100_128`, {
+const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${config.elevenlabs.voiceEn}?output_format=mp3_44100_128`, {
   method: "POST",
   headers: { "xi-api-key": config.elevenlabs.apiKey, "Content-Type": "application/json" },
   body: JSON.stringify({ text: "News Next Door. This is a test of the English briefing voice.", model_id: config.elevenlabs.ttsModel }),

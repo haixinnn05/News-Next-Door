@@ -1,7 +1,7 @@
 import { config } from "../config.ts";
 import { all, get, run, tx, type Db } from "../db.ts";
 import { newId, nowIso } from "../lib/util.ts";
-import { confirmationText, reminderText, updateText } from "./messages.ts";
+import { confirmationText, reminderText, updateText, type TextLang } from "./messages.ts";
 import { eventTiming, getEvents, getProposal, MEETING_TYPES, nextEvent, type EventRow, type ProposalRow, type PublishChange } from "./proposals.ts";
 import { transportFor } from "./transport.ts";
 
@@ -10,7 +10,8 @@ export interface SubscriberRow {
   handle: string;
   space_id: string | null;
   transport: string;
-  preferred_language: "en" | "zh";
+  preferred_language: TextLang;
+  language_chosen_at?: string | null;
   opted_in_at: string;
   active: number;
   stopped_at: string | null;
@@ -95,7 +96,7 @@ export function reconcileReminders(db: Db, proposalId: string): { scheduled: num
         cancelled++;
       }
     }
-    const subs = all<SubscriptionRow & { lang: "en" | "zh" }>(
+    const subs = all<SubscriptionRow & { lang: TextLang }>(
       db,
       "SELECT s.*, sb.preferred_language AS lang FROM subscriptions s JOIN subscribers sb ON sb.id = s.subscriber_id WHERE s.proposal_id = ? AND s.active = 1 AND sb.active = 1",
       proposalId,
@@ -158,7 +159,7 @@ export function onSubscribed(db: Db, sub: SubscriptionRow, subscriber: Subscribe
 export function onProposalPublished(db: Db, p: ProposalRow, changes: PublishChange[], isUpdate: boolean): number {
   reconcileReminders(db, p.id);
   if (!isUpdate || changes.length === 0) return 0;
-  const subs = all<SubscriptionRow & { lang: "en" | "zh" }>(
+  const subs = all<SubscriptionRow & { lang: TextLang }>(
     db,
     "SELECT s.*, sb.preferred_language AS lang FROM subscriptions s JOIN subscribers sb ON sb.id = s.subscriber_id WHERE s.proposal_id = ? AND s.active = 1 AND sb.active = 1",
     p.id,
@@ -190,7 +191,7 @@ export function onProposalPublished(db: Db, p: ProposalRow, changes: PublishChan
 }
 
 /** One-off reply (STOP acknowledgement, help, expired code) — goes through the same logged outbound path. */
-export function queueReply(db: Db, subscriberId: string, text: string, key: string): void {
+export function queueReply(db: Db, subscriberId: string, text: string, key: string, label = "Auto-reply"): void {
   insertNotification(db, {
     delivery_key: `reply:${key}`,
     kind: "reply",
@@ -200,7 +201,7 @@ export function queueReply(db: Db, subscriberId: string, text: string, key: stri
     event_id: null,
     event_version: null,
     proposal_version: null,
-    label: "Auto-reply",
+    label,
     body: text,
     due_at: nowIso(),
     state: "scheduled",

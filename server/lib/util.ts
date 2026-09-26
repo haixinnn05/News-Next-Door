@@ -38,17 +38,21 @@ export function nycDate(at: Date | string | number = Date.now()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: NYC_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(at));
 }
 
-export function formatNycDateTime(iso: string, lang: "en" | "zh" = "en"): string {
+/** Locale per text language; Latin digits everywhere so numbers read the same across languages. */
+const LOCALE: Record<string, string> = { en: "en-US", zh: "zh-CN", es: "es-US", fr: "fr-FR", ja: "ja-JP", hi: "hi-IN-u-nu-latn", ar: "ar-u-nu-latn", ru: "ru-RU" };
+const localeOf = (lang: string) => LOCALE[lang] ?? "en-US";
+
+export function formatNycDateTime(iso: string, lang = "en"): string {
   const d = new Date(iso);
   if (lang === "zh") {
     return new Intl.DateTimeFormat("zh-CN", { timeZone: NYC_TZ, month: "long", day: "numeric", weekday: "short", hour: "numeric", minute: "2-digit" }).format(d) + "（纽约时间）";
   }
-  return new Intl.DateTimeFormat("en-US", { timeZone: NYC_TZ, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d);
+  return new Intl.DateTimeFormat(localeOf(lang), { timeZone: NYC_TZ, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d);
 }
 
-export function formatDateOnly(date: string, lang: "en" | "zh" = "en"): string {
+export function formatDateOnly(date: string, lang = "en"): string {
   const d = new Date(`${date}T12:00:00Z`);
-  return new Intl.DateTimeFormat(lang === "zh" ? "zh-CN" : "en-US", { timeZone: "UTC", month: lang === "zh" ? "long" : "short", day: "numeric", year: "numeric" }).format(d);
+  return new Intl.DateTimeFormat(localeOf(lang), { timeZone: "UTC", month: lang === "zh" || lang === "ja" ? "long" : "short", day: "numeric", year: "numeric" }).format(d);
 }
 
 export class HttpError extends Error {

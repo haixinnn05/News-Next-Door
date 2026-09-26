@@ -2,10 +2,10 @@ import crypto from "node:crypto";
 import { config } from "../config.ts";
 import { get, run, tx, type Db } from "../db.ts";
 import { HttpError, newId, nowIso } from "../lib/util.ts";
-import { EXPIRED_TEXT, HELP_TEXT, STOP_TEXT } from "./messages.ts";
+import { expiredText, helpText, LANG_NAMES, langMenuText, langSetText, stopText, TEXT_LANGS, textLang, type TextLang } from "./messages.ts";
 import { cancelQueuedFor, onSubscribed, queueReply, type SubscriberRow, type SubscriptionRow } from "./notifications.ts";
 import { getProposal } from "./proposals.ts";
-import { onAppSubscribed, snapshotOf, type AppSubscriptionRow } from "./appBriefings.ts";
+import { aboutOf, onAppSubscribed, snapshotOf, type AppSubscriptionRow } from "./appBriefings.ts";
 import type { ZapApplication } from "./zap.ts";
 
 export interface FollowCodeRow {
@@ -47,7 +47,7 @@ function freeFollowCode(db: Db, now: number): string {
   throw new HttpError(503, "Could not allocate a follow code, try again.");
 }
 
-export function createFollowCode(db: Db, proposalId: string, language: "en" | "zh", userId: string | null = null): FollowCodeRow {
+export function createFollowCode(db: Db, proposalId: string, language: TextLang, userId: string | null = null): FollowCodeRow {
   const p = getProposal(db, proposalId);
   if (!p || !p.published) throw new HttpError(404, "Proposal not found");
   const now = Date.now();
@@ -61,13 +61,13 @@ export function createFollowCode(db: Db, proposalId: string, language: "en" | "z
 }
 
 /** The snapshot is what the page showed, so the first update compares against what the resident saw. */
-export function createAppFollowCode(db: Db, app: ZapApplication, language: "en" | "zh", userId: string | null = null): AppFollowCodeRow {
+export function createAppFollowCode(db: Db, app: ZapApplication, language: TextLang, userId: string | null = null): AppFollowCodeRow {
   const now = Date.now();
   const code = freeFollowCode(db, now);
   run(
     db,
     "INSERT INTO app_follow_codes (code, project_id, snapshot_json, language, created_at, expires_at, user_id) VALUES (?,?,?,?,?,?,?)",
-    code, app.id, JSON.stringify(snapshotOf(app)), language, new Date(now).toISOString(), new Date(now + config.followCodeTtlMinutes * 60_000).toISOString(), userId,
+    code, app.id, JSON.stringify({ ...snapshotOf(app), ...aboutOf(db, app) }), language, new Date(now).toISOString(), new Date(now + config.followCodeTtlMinutes * 60_000).toISOString(), userId,
   );
   return get<AppFollowCodeRow>(db, "SELECT * FROM app_follow_codes WHERE code = ?", code)!;
 }
@@ -107,7 +107,12 @@ function upsertSubscriber(db: Db, ev: Inbound, language: string): SubscriberRow 
   const existing = get<SubscriberRow>(db, "SELECT * FROM subscribers WHERE handle = ?", handle);
   const now = nowIso();
   if (existing) {
-    run(db, "UPDATE subscribers SET space_id=COALESCE(?, space_id), transport=?, preferred_language=? WHERE id=?", ev.spaceId, ev.transport, language, existing.id);
+    // a language the resident picked by text sticks; otherwise follow the page they followed from
+    run(
+      db,
+      "UPDATE subscribers SET space_id=COALESCE(?, space_id), transport=?, preferred_language=CASE WHEN language_chosen_at IS NULL THEN ? ELSE preferred_language END WHERE id=?",
+      ev.spaceId, ev.transport, language, existing.id,
+    );
     return get<SubscriberRow>(db, "SELECT * FROM subscribers WHERE id = ?", existing.id)!;
   }
   const id = newId("sub");
@@ -118,14 +123,17 @@ function upsertSubscriber(db: Db, ev: Inbound, language: string): SubscriberRow 
 /**
  * Handle one inbound message. The resident initiating the conversation with a follow code is
  * the opt-in. Idempotent per provider event id, and repeating a follow request is harmless.
+ * "list" and "question" are answered afterwards by the assistant (they need network or a model).
  */
-export function handleInbound(db: Db, ev: Inbound): { action: string } {
+export function handleInbound(db: Db, ev: Inbound): { action: string; subscriberId?: string } {
   const seen = run(db, "INSERT OR IGNORE INTO inbound_seen (provider_event_id, at) VALUES (?,?)", ev.providerEventId, nowIso());
   if (Number(seen.changes) === 0) return { action: "duplicate" };
   const text = ev.text.trim();
   const handle = normalizeHandle(ev.handle);
   const known = get<SubscriberRow>(db, "SELECT * FROM subscribers WHERE handle = ?", handle);
   run(db, "INSERT INTO delivery_log (direction, transport, subscriber_id, text, outcome, at) VALUES ('inbound',?,?,?,'received',?)", ev.transport, known?.id ?? null, text, nowIso());
+
+  const lang: TextLang = known ? textLang(known.preferred_language) : /[\u4e00-\u9fff]/.test(text) ? "zh" : "en";
 
   if (/^(stop|stopall|unsubscribe|cancel|end|quit|退订)$/i.test(text)) {
     if (!known) return { action: "stop_unknown" };
@@ -134,7 +142,7 @@ export function handleInbound(db: Db, ev: Inbound): { action: string } {
       run(db, "UPDATE subscriptions SET active=0 WHERE subscriber_id=?", known.id);
       run(db, "UPDATE app_subscriptions SET active=0 WHERE subscriber_id=?", known.id);
       cancelQueuedFor(db, known.id);
-      queueReply(db, known.id, STOP_TEXT, `stop:${ev.providerEventId}`);
+      queueReply(db, known.id, stopText(lang), `stop:${ev.providerEventId}`);
     });
     return { action: "stopped" };
   }
@@ -148,7 +156,7 @@ export function handleInbound(db: Db, ev: Inbound): { action: string } {
     const valid = fc && (fc.used_at || Date.parse(fc.expires_at) > Date.now());
     if (!fc || !valid) {
       const sb = known ?? upsertSubscriberInactive(db, ev);
-      queueReply(db, sb.id, EXPIRED_TEXT, `expired:${ev.providerEventId}`);
+      queueReply(db, sb.id, expiredText(lang), `expired:${ev.providerEventId}`);
       return { action: "expired_code" };
     }
     return tx(db, () => {
@@ -171,15 +179,79 @@ export function handleInbound(db: Db, ev: Inbound): { action: string } {
     });
   }
 
-  if (/^(help|info|帮助)$/i.test(text) || known) {
+  if (/^(help|info|帮助|\?|？)$/i.test(text)) {
     const sb = known ?? upsertSubscriberInactive(db, ev);
-    queueReply(db, sb.id, HELP_TEXT, `help:${ev.providerEventId}`);
+    queueReply(db, sb.id, helpText(lang), `help:${ev.providerEventId}`);
+    return { action: "help" };
+  }
+
+  // choosing a text language: LANGUAGE shows a numbered menu; a number (right after it) or a language name picks one
+  if (LANGUAGE_WORD.test(text)) {
+    const sb = known ?? upsertSubscriberInactive(db, ev);
+    queueReply(db, sb.id, langMenuText(lang), `langmenu:${ev.providerEventId}`, "Language menu");
+    return { action: "language_menu" };
+  }
+  const picked = languageRequested(text) ?? (known && /^[1-8]$/.test(text) && menuShownRecently(db, known.id) ? TEXT_LANGS[Number(text) - 1] : null);
+  if (picked) {
+    const sb = known ?? upsertSubscriberInactive(db, ev);
+    run(db, "UPDATE subscribers SET preferred_language=?, language_chosen_at=? WHERE id=?", picked, nowIso(), sb.id);
+    queueReply(db, sb.id, langSetText(picked), `langset:${ev.providerEventId}`, "Language set");
+    return { action: "language_set" };
+  }
+  if (known?.active) {
+    if (/^(list|following|my follows|关注|列表)$/i.test(text)) return { action: "list", subscriberId: known.id };
+    return { action: "question", subscriberId: known.id };
+  }
+  if (known) {
+    queueReply(db, known.id, helpText(lang), `help:${ev.providerEventId}`);
     return { action: "help" };
   }
   // unknown sender, not a code: reply once with help so they know how to follow
   const sb = upsertSubscriberInactive(db, ev);
-  queueReply(db, sb.id, HELP_TEXT, `help:${ev.providerEventId}`);
+  queueReply(db, sb.id, helpText(lang), `help:${ev.providerEventId}`);
   return { action: "help" };
+}
+
+const LANGUAGE_WORD = /^(language|languages|lang|语言|語言|idioma|langue|言語|भाषा|لغة|اللغة|язык)$/i;
+
+/** Language names residents might text, in English and in each language. */
+const LANGUAGE_ALIASES: Record<TextLang, string[]> = {
+  en: ["english", "inglés", "ingles", "anglais", "英语", "英文", "英語", "अंग्रेज़ी", "अंग्रेजी", "الإنجليزية", "английский"],
+  zh: ["chinese", "中文", "汉语", "普通话", "chino", "chinois", "中国語", "चीनी", "الصينية", "китайский"],
+  es: ["spanish", "español", "espanol", "西班牙语", "espagnol", "スペイン語", "स्पेनिश", "الإسبانية", "испанский"],
+  fr: ["french", "français", "francais", "法语", "francés", "frances", "フランス語", "फ़्रेंच", "फ्रेंच", "الفرنسية", "французский"],
+  ja: ["japanese", "日本語", "日语", "japonés", "japones", "japonais", "जापानी", "اليابانية", "японский"],
+  hi: ["hindi", "हिन्दी", "हिंदी", "印地语", "ヒンディー語", "الهندية", "хинди"],
+  ar: ["arabic", "العربية", "عربي", "阿拉伯语", "árabe", "arabe", "アラビア語", "अरबी", "арабский"],
+  ru: ["russian", "русский", "俄语", "ruso", "russe", "ロシア語", "रूसी", "الروسية"],
+};
+
+function languageNamed(text: string): TextLang | null {
+  const t = text.trim().replace(/[.!。！]+$/, "").toLowerCase();
+  for (const l of TEXT_LANGS) if (t === LANG_NAMES[l].toLowerCase() || LANGUAGE_ALIASES[l].includes(t)) return l;
+  return null;
+}
+
+/**
+ * A language asked for in plain words, e.g. "Can we speak in English", "用英文", "en español por favor".
+ * Needs a switching word as well as a language name, so "What's the Chinese name?" stays a question.
+ */
+function languageRequested(text: string): TextLang | null {
+  const named = languageNamed(text);
+  if (named) return named;
+  const t = text.trim().toLowerCase();
+  if (t.length > 60) return null;
+  const cue = /\b(speak|talk|text|write|reply|answer|switch|change|use|in|please|hablar|habla|háblame|escríbeme|en|parler|parlez|écrivez|говорите|пишите|по)\b|说|講|讲|用|换成|改成|切换|で|में|بال/;
+  if (!cue.test(t)) return null;
+  for (const l of TEXT_LANGS) for (const alias of [LANG_NAMES[l].toLowerCase(), ...LANGUAGE_ALIASES[l]]) if (t.includes(alias)) return l;
+  return null;
+}
+
+/** A bare number only picks a language right after we sent the menu, and only until they've picked one. */
+function menuShownRecently(db: Db, subscriberId: string): boolean {
+  const since = new Date(Date.now() - 15 * 60_000).toISOString();
+  const chosen = get<{ language_chosen_at: string | null }>(db, "SELECT language_chosen_at FROM subscribers WHERE id=?", subscriberId)?.language_chosen_at ?? "";
+  return !!get(db, "SELECT 1 FROM notifications WHERE subscriber_id=? AND label='Language menu' AND created_at > ? AND created_at > ?", subscriberId, since, chosen);
 }
 
 function subscribeToApp(db: Db, ev: Inbound, fc: AppFollowCodeRow): { action: string } {

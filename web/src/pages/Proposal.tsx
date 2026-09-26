@@ -262,14 +262,14 @@ function AudioTab({ p }: { p: ProposalDetail }) {
   const [showRefs, setShowRefs] = useState(false);
   const en = p.audio.en;
   const zh = p.audio.zh;
-  // Audio follows the site language and exists only in English and Chinese (ElevenLabs credit is limited).
-  // A Chinese visitor hears English until the Chinese audio is ready.
-  const lang: "en" | "zh" = uiLang === "zh" && zh?.status === "ready" ? "zh" : "en";
-  const cur = lang === "en" ? en : zh;
+  // Audio is only in the visitor's own language, and only English (American voice) and Chinese (Mandarin
+  // voice) exist; other languages see "not available yet" instead of a player.
+  const lang: "en" | "zh" | null = uiLang === "en" || uiLang === "zh" ? uiLang : null;
+  const cur = lang === "en" ? en : lang === "zh" ? zh : null;
   const refs = p.evidence.filter((e) => ["summary", "purpose", "stage", "location", "participation"].includes(e.field) || e.field.startsWith("event:"));
 
   let note: string | null = null;
-  if (uiLang === "zh" && lang === "en" && en?.status === "ready") note = t("zhPending");
+  if (!lang) note = null;
   else if (!cur || cur.status === "draft") note = t("audioNone");
   else if (cur.status === "pending") note = lang === "zh" ? t("zhPending") : t("audioPending");
   else if (cur.status === "failed") note = t("audioFailed");
@@ -285,8 +285,13 @@ function AudioTab({ p }: { p: ProposalDetail }) {
           </p>
         </div>
       </div>
-      <AudioPlayer url={cur?.status === "ready" ? cur.url : null} label={lang === "en" ? "English briefing" : "Chinese briefing"} />
-      {uiLang !== "en" && uiLang !== "zh" && <p className="xs subtle" style={{ margin: "8px 2px 0" }}>{t("audioEnZhOnly")}</p>}
+      {lang ? (
+        <AudioPlayer url={cur?.status === "ready" ? cur.url : null} label={lang === "en" ? "English briefing" : "Chinese briefing"} />
+      ) : (
+        <p className="muted" style={{ margin: 0 }}>
+          {t("audioEnZhOnly")}
+        </p>
+      )}
       {note && (
         <div className="banner info" style={{ marginTop: 12 }}>
           <Icon name="info" size={16} />

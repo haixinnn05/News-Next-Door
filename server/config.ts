@@ -46,10 +46,18 @@ export const config = {
     get enabled() {
       return this.apiKey.length > 0;
     },
+    /**
+     * Fallback for answering texted questions when the Grok API isn't available: run Grok through the
+     * Cursor CLI (`agent`) signed in on this machine. Off unless GROK_VIA_CURSOR_CLI=true.
+     */
+    cursorCli: env("GROK_VIA_CURSOR_CLI") === "true",
+    cursorModel: env("GROK_CURSOR_MODEL", "grok-4.7-low-fast"),
   },
   elevenlabs: {
     apiKey: env("ELEVENLABS_API_KEY"),
-    voiceId: env("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
+    /** English is read by an American voice ("Sarah"), Chinese by a native Mandarin voice ("Jill", Voice Library). */
+    voiceEn: env("ELEVENLABS_VOICE_ID_EN", "EXAVITQu4vr4xnSDxMaL"),
+    voiceZh: env("ELEVENLABS_VOICE_ID_ZH", "V3z1DARAbkkTVEx5lmEl"),
     ttsModel: env("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2"),
     dubbingTarget: env("ELEVENLABS_DUB_TARGET", "zh"),
     get enabled() {

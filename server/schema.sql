@@ -159,6 +159,8 @@ CREATE TABLE IF NOT EXISTS follow_codes (
   subscription_id TEXT,
   user_id       TEXT                        -- signed-in resident who requested the code, if any
 );
+-- subscribers.language_chosen_at (added column): set when the resident picks a text language by SMS;
+-- after that, following from a page in another language doesn't change it.
 
 CREATE TABLE IF NOT EXISTS saved_proposals (
   user_id     TEXT NOT NULL,                -- Better Auth user id
