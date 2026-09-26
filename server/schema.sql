@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS drafts (
   document_id  TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
   item_index   INTEGER NOT NULL DEFAULT 0,
   status       TEXT NOT NULL,           -- extracting | needs_review | failed | published | discarded
-  extractor    TEXT NOT NULL,           -- grok | manual | seed
+  extractor    TEXT NOT NULL,           -- grok | grok_cursor | manual | seed
   model        TEXT,
   data_json    TEXT NOT NULL,           -- DraftData
   issues_json  TEXT NOT NULL DEFAULT '[]',

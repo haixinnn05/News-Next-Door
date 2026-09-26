@@ -331,7 +331,7 @@ function AudioTab({ p }: { p: ProposalDetail }) {
             <Icon name="info" size={15} />
             {zh?.translation_review === "reviewed" ? t("reviewedTranslation") : t("generatedTranslation")}
             {zh?.status === "ready" && zh.method && (
-              <span className="subtle xs">· {zh.method === "dubbing" ? "ElevenLabs Dubbing" : "Grok translation + ElevenLabs voice"}</span>
+              <span className="subtle xs">· {zh.method === "dubbing" ? "ElevenLabs Dubbing" : zh.method === "tts_translated_cursor" ? "Grok (in Cursor) translation + ElevenLabs voice" : "Grok translation + ElevenLabs voice"}</span>
             )}
           </div>
         </div>
