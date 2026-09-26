@@ -13,7 +13,9 @@ import { translateCardToChinese } from "../services/grok.ts";
 import { queueTestMessage, reconcileReminders, runDueNotifications, type NotificationRow, type SubscriberRow } from "../services/notifications.ts";
 import { coverage, getProposal, listPublished, proposalCard, proposalDetail, publishDraft, search, type ProposalRow } from "../services/proposals.ts";
 import { createFollowCode, followStatus, handleInbound } from "../services/subscriptions.ts";
-import { queensCb2Applications } from "../services/zap.ts";
+import { BOARDS, boardById, DEFAULT_BOARD_ID } from "../lib/boards.ts";
+import { communityDistrictBoundary } from "../services/boundary.ts";
+import { districtApplications } from "../services/zap.ts";
 
 const MIME: Record<string, string> = { ".mp3": "audio/mpeg", ".flac": "audio/flac", ".pdf": "application/pdf", ".html": "text/html; charset=utf-8" };
 
@@ -63,7 +65,19 @@ export function createApp(db: Db, opts: { photonEnabled: boolean }) {
     return c.json(r);
   });
 
-  app.get("/api/applications", async (c) => c.json(await queensCb2Applications()));
+  app.get("/api/boards", (c) => c.json({ default_id: DEFAULT_BOARD_ID, boards: BOARDS }));
+
+  app.get("/api/boards/:id/boundary", async (c) => {
+    const board = boardById(c.req.param("id"));
+    if (!board) throw new HttpError(404, "Unknown community board");
+    return c.json({ board_id: board.id, geometry: await communityDistrictBoundary(board.boroCd) });
+  });
+
+  app.get("/api/applications", async (c) => {
+    const board = boardById(c.req.query("board") || DEFAULT_BOARD_ID);
+    if (!board) throw new HttpError(404, "Unknown community board");
+    return c.json(await districtApplications(board));
+  });
 
   app.get("/api/proposals/:id", (c) => {
     const p = getProposal(db, c.req.param("id"));

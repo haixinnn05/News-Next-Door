@@ -100,8 +100,8 @@ const dict = {
   readMore: ["Read the official document", "阅读官方文件"],
   liveTitle: ["Live applications in Queens CB 2", "皇后区第二社区委员会的现行申请"],
   liveLede: [
-    "Pulled from NYC Planning’s Zoning Application Portal. These are the city’s own records — name, status, applicant, and description — not the reviewed briefings below.",
-    "数据来自纽约市城市规划局的分区申请门户。这些是市政府公布的记录（名称、状态、申请人和说明），与下方经过核对的简报不同。",
+    "Pulled from NYC Planning’s Zoning Application Portal. These are the city’s own records — name, status, applicant, and description.",
+    "数据来自纽约市城市规划局的分区申请门户。这些是市政府公布的记录：名称、状态、申请人和说明。",
   ],
   openRecord: ["Open official record", "打开官方记录"],
   applicant: ["Applicant", "申请人"],

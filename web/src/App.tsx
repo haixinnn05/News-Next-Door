@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Footer, Header } from "./components/Header";
 import { ToastProvider } from "./components/Toast";
+import { BoardProvider } from "./lib/board";
 import { LangProvider } from "./lib/i18n";
 import { MetaProvider } from "./lib/meta";
 import { match, RouterProvider, useRouter } from "./lib/router";
@@ -49,11 +50,13 @@ export function App() {
   return (
     <RouterProvider>
       <LangProvider>
+        <BoardProvider>
         <MetaProvider>
           <ToastProvider>
             <Routes />
           </ToastProvider>
         </MetaProvider>
+        </BoardProvider>
       </LangProvider>
     </RouterProvider>
   );

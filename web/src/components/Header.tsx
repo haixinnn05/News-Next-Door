@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useBoard } from "../lib/board";
 import { useLang } from "../lib/i18n";
 import { Link, useRouter } from "../lib/router";
 import { BrandMark, Icon } from "./Icon";
 
 export function Header() {
   const { t, lang, setLang } = useLang();
+  const { board, boards, setBoard } = useBoard();
   const { path } = useRouter();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -34,9 +36,18 @@ export function Header() {
         <div className="header-right">
           <label className="board-select" title="Covered community board">
             <span className="sr-only">Community board</span>
-            <select defaultValue="queens-cb2" aria-label="Community board">
-              <option value="queens-cb2">Queens CB 2</option>
-              <option disabled>More boards coming soon</option>
+            <select value={board.id} aria-label="Community board" onChange={(e) => setBoard(e.target.value)}>
+              {["Queens", "Brooklyn", "Manhattan"].map((borough) => (
+                <optgroup key={borough} label={borough}>
+                  {boards
+                    .filter((b) => b.borough === borough)
+                    .map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.shortName}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
             </select>
             <Icon name="chevronDown" size={14} />
           </label>
@@ -60,7 +71,7 @@ export function Footer() {
     <footer className="footer">
       <div className="container inner">
         <div>
-          <strong style={{ color: "var(--ink)" }}>Before the Vote</strong> — an independent civic prototype. Not affiliated with Queens Community Board 2 or the City of New York.
+          <strong style={{ color: "var(--ink)" }}>Before the Vote</strong> — an independent civic prototype. Not affiliated with a community board or the City of New York.
           <br />
           Always check the official document linked on each proposal. Chinese text and audio are generated translations unless marked reviewed.
         </div>

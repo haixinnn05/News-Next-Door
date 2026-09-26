@@ -8,6 +8,7 @@
  * These records are the city's own fields (name, brief, status, applicant).
  * They are not page-cited briefings, so they stay out of the publish pipeline.
  */
+import type { Board } from "../lib/boards.ts";
 import { HttpError } from "../lib/util.ts";
 
 const DATASET = "https://data.cityofnewyork.us/resource/hgx4-8ukb.json";
@@ -80,6 +81,7 @@ export interface ZapFeed {
   source: {
     name: string;
     dataset_url: string;
+    board_id: string;
     board: string;
     fetched_at: string;
   };
@@ -91,26 +93,35 @@ function day(value: string | undefined): string | null {
   return match ? match[1] : null;
 }
 
-function districtLabel(code: string): string {
+const BOROUGH_NAME: Record<string, string> = { Q: "Queens", K: "Brooklyn", M: "Manhattan", X: "Bronx", R: "Staten Island" };
+
+export function districtLabel(code: string): string {
   return code
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean)
     .map((part) => {
-      const match = /^Q(\d+)$/.exec(part);
-      return match ? `Queens CB ${Number(match[1])}` : part;
+      const match = /^([QKMXR])(\d+)$/.exec(part);
+      return match ? `${BOROUGH_NAME[match[1]]} CB ${Number(match[2])}` : part;
     })
     .join(", ");
 }
 
-function includesCb2(code: string | undefined): boolean {
+/** True when a ZAP community_district cell includes this exact code (Q01 does not match Q10). */
+export function includesDistrict(code: string | undefined, zapCode: string): boolean {
   return (code ?? "")
     .split(",")
     .map((part) => part.trim())
-    .includes("Q02");
+    .includes(zapCode);
 }
 
-export function normalizeZapRows(rows: ZapRow[]): ZapApplication[] {
+/** SoQL predicate. zapCode must be a catalog code like Q02, never raw user text. */
+export function communityDistrictClause(zapCode: string): string {
+  if (!/^[QKMXR]\d{2}$/.test(zapCode)) throw new Error(`Invalid community district code: ${zapCode}`);
+  return `(community_district = '${zapCode}' OR community_district like '${zapCode},%' OR community_district like '%,${zapCode}' OR community_district like '%, ${zapCode}' OR community_district like '%,${zapCode},%' OR community_district like '%, ${zapCode},%')`;
+}
+
+export function normalizeZapRows(rows: ZapRow[], zapCode: string): ZapApplication[] {
   const applications: ZapApplication[] = [];
   for (const row of rows) {
     const id = row.project_id?.trim();
@@ -119,7 +130,7 @@ export function normalizeZapRows(rows: ZapRow[]): ZapApplication[] {
     if (row.project_status && row.project_status !== "Active") continue;
     if (row.dcp_visibility && row.dcp_visibility !== "General Public") continue;
     if (!PUBLIC_STATUSES.includes(row.public_status as ZapPublicStatus)) continue;
-    if (!includesCb2(row.community_district)) continue;
+    if (!includesDistrict(row.community_district, zapCode)) continue;
     const actions = (row.actions ?? "")
       .split(/[;,]/)
       .map((code) => code.trim())
@@ -134,7 +145,7 @@ export function normalizeZapRows(rows: ZapRow[]): ZapApplication[] {
       applicant_type: row.applicant_type?.trim() || null,
       ulurp_numbers: row.ulurp_numbers?.trim() || null,
       ceqr_number: row.ceqr_number?.trim() || null,
-      districts: districtLabel(row.community_district ?? "Q02"),
+      districts: districtLabel(row.community_district ?? zapCode),
       council_district: row.cc_district == null || row.cc_district === "" ? null : String(row.cc_district),
       actions,
       milestone: row.current_milestone?.trim() || null,
@@ -250,10 +261,11 @@ async function attachLocations(apps: ZapApplication[]): Promise<ZapApplication[]
   return locateApplications(apps, bbls, lots);
 }
 
-let cache: { at: number; body: ZapFeed } | null = null;
+const cache = new Map<string, { at: number; body: ZapFeed }>();
 
-export async function queensCb2Applications(now = Date.now()): Promise<ZapFeed> {
-  if (cache && now - cache.at < TTL_MS) return cache.body;
+export async function districtApplications(board: Board, now = Date.now()): Promise<ZapFeed> {
+  const hit = cache.get(board.id);
+  if (hit && now - hit.at < TTL_MS) return hit.body;
   const url = new URL(DATASET);
   url.searchParams.set(
     "$select",
@@ -280,7 +292,7 @@ export async function queensCb2Applications(now = Date.now()): Promise<ZapFeed> 
   );
   url.searchParams.set(
     "$where",
-    "borough = 'Queens' AND community_district like '%Q02%' AND public_status in ('Filed', 'In Public Review', 'Noticed') AND project_status = 'Active' AND (dcp_visibility = 'General Public' OR dcp_visibility IS NULL)",
+    `${communityDistrictClause(board.zapCode)} AND public_status in ('Filed', 'In Public Review', 'Noticed') AND project_status = 'Active' AND (dcp_visibility = 'General Public' OR dcp_visibility IS NULL)`,
   );
   url.searchParams.set("$limit", "100");
 
@@ -298,7 +310,7 @@ export async function queensCb2Applications(now = Date.now()): Promise<ZapFeed> 
     throw new HttpError(502, "NYC Planning's application list is temporarily unavailable.");
   }
 
-  let applications = normalizeZapRows(rows as ZapRow[]);
+  let applications = normalizeZapRows(rows as ZapRow[], board.zapCode);
   let located = true;
   try {
     applications = await attachLocations(applications);
@@ -310,11 +322,12 @@ export async function queensCb2Applications(now = Date.now()): Promise<ZapFeed> 
     source: {
       name: "NYC Open Data — Zoning Application Portal (ZAP) Project Data",
       dataset_url: DATASET_PAGE,
-      board: "Queens Community District 2",
+      board_id: board.id,
+      board: board.name,
       fetched_at: new Date(now).toISOString(),
     },
     applications,
   };
-  if (located) cache = { at: now, body };
+  if (located) cache.set(board.id, { at: now, body });
   return body;
 }

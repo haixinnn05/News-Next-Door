@@ -1,4 +1,4 @@
-import type { FollowResponse, Meta, ProposalDetail, SearchResponse, ZapFeed } from "./types";
+import type { Board, DistrictGeometry, FollowResponse, Meta, ProposalDetail, SearchResponse, ZapFeed } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -24,7 +24,9 @@ const json = (method: string, data?: unknown): RequestInit => ({ method, headers
 export const api = {
   meta: () => request<Meta>("/api/meta"),
   search: (q = "", category = "all") => request<SearchResponse>(`/api/proposals?q=${encodeURIComponent(q)}&category=${category}`),
-  applications: () => request<ZapFeed>("/api/applications"),
+  boards: () => request<{ default_id: string; boards: Board[] }>("/api/boards"),
+  boundary: (boardId: string) => request<{ board_id: string; geometry: DistrictGeometry }>(`/api/boards/${encodeURIComponent(boardId)}/boundary`),
+  applications: (boardId: string) => request<ZapFeed>(`/api/applications?board=${encodeURIComponent(boardId)}`),
   proposal: (id: string) => request<ProposalDetail>(`/api/proposals/${id}`),
   follow: (id: string, language: string) => request<FollowResponse>(`/api/proposals/${id}/follow`, json("POST", { language })),
   followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "expired" | "unknown" }>(`/api/follow/${code}`),

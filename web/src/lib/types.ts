@@ -23,8 +23,24 @@ export interface ZapApplication {
   location: { label: string; lat: number; lng: number; lot_count: number } | null;
 }
 
+export interface Board {
+  id: string;
+  name: string;
+  shortName: string;
+  borough: string;
+  number: number;
+  zapCode: string;
+  boroCd: number;
+  neighborhoods: string[];
+}
+
+export interface DistrictGeometry {
+  type: "Polygon" | "MultiPolygon";
+  coordinates: number[][][] | number[][][][];
+}
+
 export interface ZapFeed {
-  source: { name: string; dataset_url: string; board: string; fetched_at: string };
+  source: { name: string; dataset_url: string; board_id: string; board: string; fetched_at: string };
   applications: ZapApplication[];
 }
 

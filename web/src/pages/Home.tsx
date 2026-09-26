@@ -4,6 +4,7 @@ import { HeroSkyline } from "../components/Illustration";
 import { LiveApplications } from "../components/LiveApplications";
 import { ProposalCardView } from "../components/ProposalCard";
 import { api } from "../lib/api";
+import { useBoard } from "../lib/board";
 import { useLang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { Link, useRouter } from "../lib/router";
@@ -30,9 +31,10 @@ export function SearchBar({ initial = "", compact = false, onSearch }: { initial
 
 export function Home() {
   const { t, lang } = useLang();
+  const { board } = useBoard();
   const { navigate } = useRouter();
   const recent = useLoad(() => api.search(), []);
-  const cards = recent.data?.results ?? [];
+  const reviewed = board.id === "queens-cb2" ? (recent.data?.results ?? []).filter((p) => !p.is_sample) : [];
   return (
     <>
       <section className="container">
@@ -43,17 +45,17 @@ export function Home() {
             <SearchBar onSearch={(q) => navigate(`/discover${q ? `?q=${encodeURIComponent(q)}` : ""}`)} />
             <div className="coverage-note">
               <Icon name="pin" size={14} />
-              {t("coverage")}
+              {lang === "zh" ? `${board.name}：${board.neighborhoods.join("、")}` : `${board.name}: ${board.neighborhoods.join(", ")}.`}
             </div>
           </div>
           <div className="hero-art">
             <HeroSkyline />
             <div className="hero-note" aria-hidden="true">
-              Queens
+              {board.borough}
               <br />
               Community
               <br />
-              Board 2
+              Board {board.number}
               <svg viewBox="0 0 60 44" fill="none" stroke="#2a2a28" strokeWidth="2" strokeLinecap="round">
                 <path d="M50 4 C 40 20, 28 30, 8 38" />
                 <path d="M8 38 l10 -1 M8 38 l4 -9" />
@@ -64,19 +66,22 @@ export function Home() {
       </section>
 
       <section className="container">
-        <LiveApplications />
-        <div className="section-head">
-          <h2>{t("recentProposals")}</h2>
-          <Link to="/discover" className="row small" style={{ gap: 6, color: "var(--ink-2)" }}>
-            {t("viewAll")} <Icon name="arrowRight" size={14} />
-          </Link>
-        </div>
-        {recent.error && <div className="banner red">{recent.error}</div>}
-        <div className="grid-3">
-          {recent.loading && !cards.length
-            ? [0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 300 }} />)
-            : cards.slice(0, 3).map((p) => <ProposalCardView key={p.id} p={p} />)}
-        </div>
+        <LiveApplications boardId={board.id} boardName={board.shortName} />
+        {reviewed.length > 0 && (
+          <>
+            <div className="section-head">
+              <h2>{lang === "zh" ? "已核对的简报" : "Reviewed briefing"}</h2>
+              <Link to="/discover" className="row small" style={{ gap: 6, color: "var(--ink-2)" }}>
+                {t("viewAll")} <Icon name="arrowRight" size={14} />
+              </Link>
+            </div>
+            <div className="grid-3">
+              {reviewed.map((p) => (
+                <ProposalCardView key={p.id} p={p} />
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="explain-strip">
           <div className="item">
