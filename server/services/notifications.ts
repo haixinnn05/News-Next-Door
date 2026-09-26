@@ -42,6 +42,7 @@ export interface NotificationRow {
   last_error: string | null;
   sent_at: string | null;
   is_demo: number;
+  app_subscription_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,13 +59,17 @@ export function primarySourceUrl(db: Db, proposalId: string): string | null {
   return url?.startsWith("/") ? `${config.publicBaseUrl}${url}` : url;
 }
 
-function insertNotification(db: Db, n: Omit<NotificationRow, "id" | "attempts" | "provider_message_id" | "last_error" | "sent_at" | "created_at" | "updated_at">): boolean {
+type NewNotification = Omit<NotificationRow, "id" | "attempts" | "provider_message_id" | "last_error" | "sent_at" | "created_at" | "updated_at" | "app_subscription_id"> & {
+  app_subscription_id?: string | null;
+};
+
+export function insertNotification(db: Db, n: NewNotification): boolean {
   const now = nowIso();
   const r = run(
     db,
-    `INSERT OR IGNORE INTO notifications (id, delivery_key, kind, subscriber_id, subscription_id, proposal_id, event_id, event_version, proposal_version, label, body, due_at, state, is_demo, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    newId("ntf"), n.delivery_key, n.kind, n.subscriber_id, n.subscription_id, n.proposal_id, n.event_id, n.event_version, n.proposal_version, n.label, n.body, n.due_at, n.state, n.is_demo, now, now,
+    `INSERT OR IGNORE INTO notifications (id, delivery_key, kind, subscriber_id, subscription_id, proposal_id, event_id, event_version, proposal_version, label, body, due_at, state, is_demo, app_subscription_id, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    newId("ntf"), n.delivery_key, n.kind, n.subscriber_id, n.subscription_id, n.proposal_id, n.event_id, n.event_version, n.proposal_version, n.label, n.body, n.due_at, n.state, n.is_demo, n.app_subscription_id ?? null, now, now,
   );
   return Number(r.changes) > 0;
 }
@@ -238,6 +243,10 @@ function stillValid(db: Db, n: NotificationRow): string | null {
   if (n.kind === "test") return null;
   if (n.subscription_id) {
     const s = get<SubscriptionRow>(db, "SELECT * FROM subscriptions WHERE id = ?", n.subscription_id);
+    if (!s || !s.active) return "Subscription is no longer active";
+  }
+  if (n.app_subscription_id) {
+    const s = get<{ active: number }>(db, "SELECT active FROM app_subscriptions WHERE id = ?", n.app_subscription_id);
     if (!s || !s.active) return "Subscription is no longer active";
   }
   if (n.proposal_id) {

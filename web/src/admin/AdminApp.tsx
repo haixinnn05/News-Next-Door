@@ -7,6 +7,7 @@ import { ImportPage } from "./ImportPage";
 import { Layout } from "./Layout";
 import { Login } from "./Login";
 import { MessagesPage } from "./MessagesPage";
+import { PlainLanguagePage } from "./PlainLanguagePage";
 import { ReviewListPage } from "./ReviewListPage";
 import { ReviewPage } from "./ReviewPage";
 import { SettingsPage } from "./SettingsPage";
@@ -86,6 +87,7 @@ export function AdminApp() {
   else if (p === "/admin/review") page = <ReviewListPage />;
   else if ((reviewId = match("/admin/review/:id", p))) page = <ReviewPage key={reviewId.id} id={reviewId.id} />;
   else if (p === "/admin/audio") page = <AudioPage />;
+  else if (p === "/admin/plain-language") page = <PlainLanguagePage />;
   else if (p === "/admin/messages") page = <MessagesPage />;
   else if (p === "/admin/subscribers") page = <SubscribersPage />;
   else if (p === "/admin/settings") page = <SettingsPage />;

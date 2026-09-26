@@ -234,3 +234,20 @@ export interface Me {
   sign_in: TeamSignIn;
   member: TeamMember | null;
 }
+
+/** Grok's Simple English + Chinese version of a live city application, checked against the record. */
+export interface AppVersion {
+  project_id: string;
+  status: "none" | "pending" | "ready" | "flagged" | "failed";
+  source: "grok_api" | "grok_cursor" | null;
+  model: string | null;
+  simple_en: string | null;
+  zh: string | null;
+  issues: string[];
+  error: string | null;
+}
+export interface AdminApplications {
+  board: { id: string; name: string };
+  grok_api: boolean;
+  applications: { id: string; name: string; public_status: string; location: string; version: AppVersion }[];
+}

@@ -149,6 +149,7 @@ const en = {
 
 type ExtraKey =
   | "actionsRequested"
+  | "audioEnZhOnly"
   | "appLede"
   | "ceqrNumber"
   | "certifiedDate"
@@ -1046,6 +1047,7 @@ const ru: Pack = {
 
 const extra: Record<Lang, Record<ExtraKey, string>> = {
   en: {
+    audioEnZhOnly: "Audio is only in English and 中文 for now, so this is the English version.",
     actionsRequested: "Actions requested",
     appLede: "This is the city's own record. The description, status, and dates are what the city published.",
     ceqrNumber: "CEQR number",
@@ -1093,6 +1095,7 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "View details",
   },
   zh: {
+    audioEnZhOnly: "目前语音只有英文和中文。",
     actionsRequested: "申请事项",
     appLede: "这是市政府公布的记录。以下说明、状态和日期都来自市政府。",
     ceqrNumber: "CEQR 编号",
@@ -1140,6 +1143,7 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "查看详情",
   },
   es: {
+    audioEnZhOnly: "Por ahora el audio solo está en inglés y chino, así que esta es la versión en inglés.",
     actionsRequested: "Trámites pedidos",
     appLede: "Este es el registro de la ciudad. La descripción, el estado y las fechas son los que publicó la ciudad.",
     ceqrNumber: "Número CEQR",
@@ -1187,6 +1191,7 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "Ver detalles",
   },
   fr: {
+    audioEnZhOnly: "Pour l'instant, l'audio n'existe qu'en anglais et en chinois : voici la version anglaise.",
     actionsRequested: "Démarches demandées",
     appLede: "Ceci est le dossier de la ville. La description, l'état et les dates viennent de la ville.",
     ceqrNumber: "Numéro CEQR",
@@ -1234,6 +1239,7 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "Voir le détail",
   },
   ja: {
+    audioEnZhOnly: "音声は現在、英語と中国語のみです。英語版を再生します。",
     actionsRequested: "求めている手続き",
     appLede: "これは市が公表した記録です。説明、状態、日付は市の発表です。",
     ceqrNumber: "CEQR番号",
@@ -1281,6 +1287,7 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "詳しく見る",
   },
   hi: {
+    audioEnZhOnly: "अभी ऑडियो केवल अंग्रेज़ी और चीनी में उपलब्ध है, इसलिए यह अंग्रेज़ी संस्करण है।",
     actionsRequested: "माँगे गए कदम",
     appLede: "यह शहर का अपना रिकॉर्ड है। विवरण, स्थिति और तारीखें शहर ने प्रकाशित की हैं।",
     ceqrNumber: "CEQR नंबर",
@@ -1328,6 +1335,7 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "विवरण देखें",
   },
   ar: {
+    audioEnZhOnly: "الصوت متاح حاليًا بالإنجليزية والصينية فقط، لذا هذه هي النسخة الإنجليزية.",
     actionsRequested: "الإجراءات المطلوبة",
     appLede: "هذا سجل المدينة. الوصف والحالة والتواريخ هي ما نشرته المدينة.",
     ceqrNumber: "رقم CEQR",
@@ -1375,6 +1383,7 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     viewDetails: "عرض التفاصيل",
   },
   ru: {
+    audioEnZhOnly: "Пока аудио есть только на английском и китайском, поэтому это английская версия.",
     actionsRequested: "Запрошенные действия",
     appLede: "Это запись города. Описание, статус и даты опубликованы городом.",
     ceqrNumber: "Номер CEQR",

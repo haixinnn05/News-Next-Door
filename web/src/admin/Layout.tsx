@@ -7,6 +7,7 @@ const NAV: { to: string; label: string; icon: IconName; also?: string[] }[] = [
   { to: "/admin/import", label: "Import Documents", icon: "upload", also: ["/admin"] },
   { to: "/admin/review", label: "Review Proposals", icon: "list" },
   { to: "/admin/audio", label: "Audio Generation", icon: "audio" },
+  { to: "/admin/plain-language", label: "Plain Language", icon: "globe" },
   { to: "/admin/messages", label: "Message Delivery", icon: "send" },
   { to: "/admin/subscribers", label: "Subscribers", icon: "users" },
 ];

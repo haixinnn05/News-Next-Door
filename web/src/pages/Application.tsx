@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { AppListen } from "../components/AppListen";
+import { FollowModal } from "../components/FollowPanel";
+import { Icon } from "../components/Icon";
 import { NewsArticle } from "../components/NewsFeed";
 import { api } from "../lib/api";
 import { fmtDate } from "../lib/format";
@@ -25,6 +28,7 @@ export function ApplicationPage({ id }: { id: string }) {
   const { t, lang } = useLang();
   const res = useLoad(() => api.application(id), [id]);
   const app = res.data;
+  const [following, setFollowing] = useState(false);
   if (res.loading && !app)
     return (
       <div className="news">
@@ -40,7 +44,22 @@ export function ApplicationPage({ id }: { id: string }) {
         </Link>
       </div>
     );
-  return <NewsArticle story={storyFromApp(app, lang)} glance={glanceOf(app, t, lang)} body={<StoryBody app={app} />} actions={<SaveButton proposalId={app.id} />} />;
+  const actions = (
+    <div className="row" style={{ gap: 10 }}>
+      <SaveButton proposalId={app.id} />
+      <button className="btn primary sm" onClick={() => setFollowing(true)}>
+        <Icon name="bell" size={15} /> {t("follow")}
+      </button>
+    </div>
+  );
+  return (
+    <>
+      <NewsArticle story={storyFromApp(app, lang)} glance={glanceOf(app, t, lang)} body={<StoryBody app={app} />} actions={actions}>
+        <AppListen id={app.id} />
+      </NewsArticle>
+      {following && <FollowModal proposalId={app.id} title={app.name} requestFollow={(l) => api.followApp(app.id, l)} onClose={() => setFollowing(false)} />}
+    </>
+  );
 }
 
 function StoryBody({ app }: { app: ZapApplication }) {

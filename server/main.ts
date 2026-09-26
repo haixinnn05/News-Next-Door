@@ -4,6 +4,7 @@ import { config } from "./config.ts";
 import { openDb } from "./db.ts";
 import { createApp } from "./http/app.ts";
 import { seedIfEmpty } from "./seed/seed.ts";
+import { checkAppUpdates, pollAppAudio } from "./services/appBriefings.ts";
 import { pollDubs } from "./services/audio.ts";
 import { recoverInFlight, runDueNotifications } from "./services/notifications.ts";
 
@@ -43,7 +44,7 @@ console.log(`  team login : ${config.auth.googleEnabled ? `Google (${config.auth
 if (config.auth.googleEnabled && config.auth.adminEmails.length === 0) console.warn("  ADMIN_EMAILS is empty, so nobody can sign in to the team console");
 if (recovered) console.warn(`  ${recovered} notification(s) were mid-send at shutdown → marked 'uncertain' for manual reconciliation`);
 
-// persistent worker: due notifications + dubbing jobs
+// persistent worker: due notifications, dubbing jobs, and changes to followed city applications
 let busy = false;
 setInterval(async () => {
   if (busy) return;
@@ -51,6 +52,8 @@ setInterval(async () => {
   try {
     await runDueNotifications(db);
     await pollDubs(db);
+    await pollAppAudio(db);
+    await checkAppUpdates(db);
   } catch (e) {
     console.error("[worker]", e);
   } finally {

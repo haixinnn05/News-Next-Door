@@ -69,7 +69,20 @@ export function NewsFeed({
   );
 }
 
-export function NewsArticle({ story, glance, body, actions }: { story: Story; glance?: { label: string; value: string | null }[]; body?: ReactNode; actions?: ReactNode }) {
+export function NewsArticle({
+  story,
+  glance,
+  body,
+  actions,
+  children,
+}: {
+  story: Story;
+  glance?: { label: string; value: string | null }[];
+  body?: ReactNode;
+  actions?: ReactNode;
+  /** Extra content after the body, such as the audio briefing. */
+  children?: ReactNode;
+}) {
   const { t, lang } = useLang();
   const date = storyDate(story.date, lang);
   return (
@@ -85,6 +98,7 @@ export function NewsArticle({ story, glance, body, actions }: { story: Story; gl
       {date && <p className="news-meta">{date}</p>}
       {story.location && <p className="news-place">{story.location}</p>}
       {body}
+      {children}
       {glance && glance.length > 0 && (
         <aside className="news-glance">
           <h2>{t("atAGlance")}</h2>
