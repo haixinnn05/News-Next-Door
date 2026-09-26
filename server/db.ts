@@ -10,7 +10,17 @@ function applySchema(db: DatabaseSync, memory = false) {
   let schema = fs.readFileSync(path.join(config.serverRoot, "schema.sql"), "utf8");
   if (memory) schema = schema.replace("PRAGMA journal_mode = WAL;", "");
   db.exec(schema);
+  for (const [table, column, type] of ADDED_COLUMNS) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
 }
+
+/** Columns added after the first release; CREATE TABLE IF NOT EXISTS won't add them to existing databases. */
+const ADDED_COLUMNS: [table: string, column: string, type: string][] = [
+  ["subscribers", "user_id", "TEXT"],
+  ["follow_codes", "user_id", "TEXT"],
+];
 
 export function openDb(dbPath = config.dbPath): DatabaseSync {
   if (instance) return instance;

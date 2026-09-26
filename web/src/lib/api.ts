@@ -1,4 +1,4 @@
-import type { FollowResponse, Meta, ProposalDetail, SearchResponse, ZapFeed } from "./types";
+import type { FollowResponse, Meta, MyProposals, ProposalDetail, SearchResponse, ZapFeed } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -29,6 +29,8 @@ export const api = {
   follow: (id: string, language: string) => request<FollowResponse>(`/api/proposals/${id}/follow`, json("POST", { language })),
   followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "expired" | "unknown" }>(`/api/follow/${code}`),
   simSend: (handle: string, text: string) => request<{ action: string }>("/api/sim/inbound", json("POST", { handle, text })),
+  myProposals: () => request<MyProposals>("/api/me/proposals"),
+  setSaved: (id: string, saved: boolean) => request<{ ok: true }>(`/api/me/saved/${encodeURIComponent(id)}`, { method: saved ? "PUT" : "DELETE" }),
   simThread: (handle: string) => request<{ id: number; direction: "to_phone" | "from_phone"; text: string; at: string }[]>(`/api/sim/thread?handle=${encodeURIComponent(handle)}`),
 };
 
@@ -42,7 +44,8 @@ export const adminToken = {
 
 export function adminRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${adminToken.get()}`);
+  const token = adminToken.get();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
   return request<T>(`/api/admin${path}`, { ...init, headers });
 }
 export const adminJson = <T,>(method: string, path: string, data?: unknown) => adminRequest<T>(path, json(method, data));

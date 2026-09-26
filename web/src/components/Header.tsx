@@ -1,7 +1,64 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAccount } from "../lib/account";
 import { useLang } from "../lib/i18n";
 import { Link, useRouter } from "../lib/router";
 import { BrandMark, Icon } from "./Icon";
+
+function AccountMenu() {
+  const { t } = useLang();
+  const { navigate } = useRouter();
+  const { user, loading, openSignIn, signOut } = useAccount();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const on = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    addEventListener("mousedown", on);
+    return () => removeEventListener("mousedown", on);
+  }, [open]);
+
+  if (loading) return <span className="account-slot" aria-hidden="true" />;
+  if (!user)
+    return (
+      <button className="btn sm" onClick={() => openSignIn()}>
+        <Icon name="user" size={15} /> {t("signIn")}
+      </button>
+    );
+  const initial = (user.name || user.email).trim().charAt(0).toUpperCase();
+  return (
+    <div className="account-menu" ref={ref}>
+      <button className="avatar-btn" aria-haspopup="menu" aria-expanded={open} aria-label={user.name || user.email} onClick={() => setOpen((o) => !o)}>
+        {user.image ? <img src={user.image} alt="" referrerPolicy="no-referrer" /> : <span>{initial}</span>}
+      </button>
+      {open && (
+        <div className="account-pop" role="menu">
+          <div className="account-who">
+            <strong>{user.name || user.email}</strong>
+            {user.name && <span className="xs subtle">{user.email}</span>}
+          </div>
+          <button
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              navigate("/me");
+            }}
+          >
+            <Icon name="bookmark" size={15} /> {t("myProposals")}
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              void signOut();
+            }}
+          >
+            <Icon name="logout" size={15} /> {t("signOut")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Header() {
   const { t, lang, setLang } = useLang();
@@ -49,6 +106,7 @@ export function Header() {
               中文
             </button>
           </div>
+          <AccountMenu />
         </div>
       </div>
     </header>

@@ -128,6 +128,14 @@ export interface Meta {
   integrations: { grok: boolean; elevenlabs: boolean; photon: boolean };
   show_sample_data: boolean;
   reminder_lead_hours: number;
+  team_sign_in: "google" | "token";
+  account_sign_in: { email: boolean; google: boolean };
+}
+
+export interface MyProposals {
+  saved: ProposalCard[];
+  following: (ProposalCard & { phone: string })[];
+  phones: string[];
 }
 
 export interface FollowResponse {
