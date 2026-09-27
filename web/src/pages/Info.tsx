@@ -12,7 +12,7 @@ const STEPS = [
 export function HowItWorks() {
   const { t } = useLang();
   const { user, zoneId } = useAccount();
-  const exploreTo = user && zoneId ? "/" : "/?scope=city";
+  const exploreTo = user && !zoneId ? "/?scope=city" : "/";
   return (
     <div className="container page prose">
       <h1>{t("howItWorks")}</h1>

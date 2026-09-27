@@ -38,12 +38,12 @@ export function Discover() {
   const { t, lang } = useLang();
   const { path, navigate } = useRouter();
   const query = useQuery();
-  const scope: Scope = query.get("scope") === "city" ? "city" : "zone";
+  const { user, loading: accountLoading, zoneId, zoneReady, openSignIn, openZone, saveZone } = useAccount();
+  const scope: Scope = user && query.get("scope") === "city" ? "city" : "zone";
   const setScope = (next: Scope) => {
     const base = path === "/discover" ? "/discover" : "/";
     navigate(next === "city" ? `${base}?scope=city` : base, { replace: true });
   };
-  const { user, loading: accountLoading, zoneId, zoneReady, openSignIn, openZone, saveZone } = useAccount();
   const { boards } = useBoard();
   const board = boards.find((b) => b.id === zoneId) ?? null;
   const apps = useLoad(() => (board ? api.applications(board.id) : Promise.reject(new Error("zone"))), [board?.id ?? ""]);
@@ -90,7 +90,7 @@ export function Discover() {
       }),
     [list, lang],
   );
-  const heading = <NewsScope scope={scope} onChange={setScope} />;
+  const heading = user ? <NewsScope scope={scope} onChange={setScope} /> : null;
 
   if (accountLoading || (user && !zoneReady && scope === "zone")) {
     return (

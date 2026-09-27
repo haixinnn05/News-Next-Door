@@ -4,6 +4,7 @@ import { Icon } from "../components/Icon";
 import { NewsArticle } from "../components/NewsFeed";
 import { SaveButton } from "./Proposal";
 import { api } from "../lib/api";
+import { useAccount } from "../lib/account";
 import { useLang, type Key, type Lang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { Link } from "../lib/router";
@@ -11,6 +12,33 @@ import { storyDate, storyFromCity } from "../lib/story";
 import type { CityAudioView, CityFacts, CityTranslation } from "../lib/types";
 
 export function CityStoryPage({ id }: { id: string }) {
+  const { t } = useLang();
+  const { user, loading, openSignIn } = useAccount();
+  if (loading)
+    return (
+      <div className="news">
+        <div className="skeleton" style={{ height: 220 }} />
+      </div>
+    );
+  if (!user)
+    return (
+      <div className="welcome">
+        <h1>{t("cityNews")}</h1>
+        <p>{t("signInForNews")}</p>
+        <div className="welcome-actions">
+          <button className="news-cta" onClick={() => openSignIn()}>
+            {t("signIn")}
+          </button>
+          <button className="welcome-secondary" onClick={() => openSignIn(null, "create")}>
+            {t("createAccount")}
+          </button>
+        </div>
+      </div>
+    );
+  return <CityStory id={id} />;
+}
+
+function CityStory({ id }: { id: string }) {
   const { t, lang } = useLang();
   const res = useLoad(() => api.cityStory(id), [id]);
   const [translated, setTranslated] = useState<CityTranslation | null>(null);
