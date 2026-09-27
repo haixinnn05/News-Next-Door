@@ -158,6 +158,15 @@ type ExtraKey =
   | "addressPlaceholder"
   | "addressUnavailable"
   | "close"
+  | "howStep1Title"
+  | "howStep1Body"
+  | "howStep2Title"
+  | "howStep2Body"
+  | "howStep3Title"
+  | "howStep3Body"
+  | "howStep4Title"
+  | "howStep4Body"
+  | "howExplore"
   | "audioEnZhOnly"
   | "appLede"
   | "ceqrNumber"
@@ -1093,6 +1102,15 @@ const ru: Pack = {
 
 const extra: Record<Lang, Record<ExtraKey, string>> = {
   en: {
+    howStep1Title: "1. Import an official document",
+    howStep1Body: "A teammate uploads a community board PDF or web page with its official URL and publication date. Text is kept page by page.",
+    howStep2Title: "2. Grok extracts, a person reviews",
+    howStep2Body: "Grok returns a structured draft — title, location, stage, dates, how to participate — and must quote the page each fact came from. Every quote is checked against the document automatically, and a teammate reviews before publishing.",
+    howStep3Title: "3. ElevenLabs audio",
+    howStep3Body: "A 60–90 second English briefing is narrated from the approved card, then dubbed into Chinese with ElevenLabs. Audio is cached per proposal version.",
+    howStep4Title: "4. Photon iMessage reminders",
+    howStep4Body: "Tap Follow, text the short code to our iMessage line, and get a reminder 24 hours before the meeting. If a meeting is rescheduled or cancelled, the old reminder is withdrawn.",
+    howExplore: "Explore proposals",
     addressClear: "Clear address",
     addressFind: "Find my board",
     addressInside: "{address} is in {board}.",
@@ -1187,6 +1205,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     whenItHappened: "When",
   },
   zh: {
+    howStep1Title: "1. 导入官方文件",
+    howStep1Body: "团队上传社区委员会的 PDF 或网页，并填写官方链接和发布日期。系统保留每一页的文字。",
+    howStep2Title: "2. Grok 提取，人工审核",
+    howStep2Body: "Grok 按固定结构提取标题、位置、阶段、日期和参与方式，每项都必须附上原文摘录。系统会自动核对摘录是否真的出现在原文中；团队审核后才发布。",
+    howStep3Title: "3. ElevenLabs 语音",
+    howStep3Body: "根据审核后的卡片生成 60–90 秒的英文简报，再用 ElevenLabs 配音翻译成中文。语音按提案版本缓存。",
+    howStep4Title: "4. Photon iMessage 提醒",
+    howStep4Body: "在提案页点击“关注”，将代码发送到我们的 iMessage 线路。会议前 24 小时收到提醒；会议改期或取消时，旧提醒会自动作废。",
+    howExplore: "开始探索",
     addressClear: "清除地址",
     addressFind: "查找我的社区委员会",
     addressInside: "{address}位于{board}。",
@@ -1281,6 +1308,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     whenItHappened: "何时",
   },
   es: {
+    howStep1Title: "1. Se importa un documento oficial",
+    howStep1Body: "Un miembro del equipo sube un PDF o una página web de la junta comunitaria con su enlace oficial y fecha de publicación. El texto se guarda página por página.",
+    howStep2Title: "2. Grok extrae, una persona revisa",
+    howStep2Body: "Grok prepara un borrador ordenado (título, lugar, etapa, fechas y cómo participar) y debe citar la página de donde sale cada dato. Cada cita se compara automáticamente con el documento, y alguien del equipo lo revisa antes de publicarlo.",
+    howStep3Title: "3. Audio con ElevenLabs",
+    howStep3Body: "Se narra un resumen en inglés de 60 a 90 segundos a partir de la ficha aprobada, y luego ElevenLabs lo dobla al chino. El audio se guarda para cada versión de la propuesta.",
+    howStep4Title: "4. Recordatorios por iMessage con Photon",
+    howStep4Body: "Toque Seguir, envíe el código corto a nuestra línea de iMessage y reciba un recordatorio 24 horas antes de la reunión. Si la reunión cambia de fecha o se cancela, el recordatorio anterior se retira.",
+    howExplore: "Ver propuestas",
     addressClear: "Borrar dirección",
     addressFind: "Buscar mi junta",
     addressInside: "{address} está en {board}.",
@@ -1375,6 +1411,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     whenItHappened: "Cuándo",
   },
   fr: {
+    howStep1Title: "1. Import d'un document officiel",
+    howStep1Body: "Un membre de l'équipe téléverse un PDF ou une page web du conseil de quartier, avec son lien officiel et sa date de publication. Le texte est conservé page par page.",
+    howStep2Title: "2. Grok extrait, une personne vérifie",
+    howStep2Body: "Grok produit un brouillon structuré (titre, lieu, étape, dates, comment participer) et doit citer la page d'où vient chaque information. Chaque citation est vérifiée automatiquement dans le document, et un membre de l'équipe relit avant publication.",
+    howStep3Title: "3. Audio ElevenLabs",
+    howStep3Body: "Un résumé de 60 à 90 secondes est lu en anglais à partir de la fiche validée, puis doublé en chinois avec ElevenLabs. L'audio est conservé pour chaque version de la proposition.",
+    howStep4Title: "4. Rappels iMessage avec Photon",
+    howStep4Body: "Touchez Suivre, envoyez le code court à notre ligne iMessage et recevez un rappel 24 heures avant la réunion. Si la réunion est reportée ou annulée, l'ancien rappel est retiré.",
+    howExplore: "Voir les propositions",
     addressClear: "Effacer l'adresse",
     addressFind: "Trouver mon conseil",
     addressInside: "{address} se trouve dans {board}.",
@@ -1469,6 +1514,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     whenItHappened: "Quand",
   },
   ja: {
+    howStep1Title: "1. 公式文書を取り込む",
+    howStep1Body: "チームのメンバーが、コミュニティ委員会の PDF またはウェブページを、公式 URL と公開日とともにアップロードします。本文はページごとに保存されます。",
+    howStep2Title: "2. Grok が抽出し、人が確認する",
+    howStep2Body: "Grok がタイトル、場所、段階、日付、参加方法をまとめた下書きを作り、各情報の出典となるページを引用します。引用は文書と自動で照合され、公開前にチームのメンバーが確認します。",
+    howStep3Title: "3. ElevenLabs の音声",
+    howStep3Body: "承認されたカードから 60〜90 秒の英語の要約を読み上げ、ElevenLabs で中国語に吹き替えます。音声は提案のバージョンごとに保存されます。",
+    howStep4Title: "4. Photon の iMessage リマインダー",
+    howStep4Body: "「フォロー」をタップし、短いコードを iMessage で送ると、会議の 24 時間前にリマインダーが届きます。会議が延期または中止になった場合、前のリマインダーは取り消されます。",
+    howExplore: "提案を見る",
     addressClear: "住所を消去",
     addressFind: "自分の委員会を探す",
     addressInside: "{address}は{board}にあります。",
@@ -1563,6 +1617,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     whenItHappened: "いつ",
   },
   hi: {
+    howStep1Title: "1. आधिकारिक दस्तावेज़ जोड़ना",
+    howStep1Body: "टीम का कोई सदस्य कम्युनिटी बोर्ड की PDF या वेब पेज को उसके आधिकारिक लिंक और प्रकाशन तिथि के साथ अपलोड करता है। पाठ पेज-दर-पेज सहेजा जाता है।",
+    howStep2Title: "2. Grok जानकारी निकालता है, इंसान जाँचता है",
+    howStep2Body: "Grok शीर्षक, स्थान, चरण, तारीखें और भाग लेने का तरीका लेकर एक व्यवस्थित मसौदा बनाता है, और हर जानकारी के लिए उस पेज का उद्धरण देता है जहाँ से वह ली गई। हर उद्धरण को दस्तावेज़ से अपने आप मिलाया जाता है, और प्रकाशित करने से पहले टीम का कोई सदस्य उसे जाँचता है।",
+    howStep3Title: "3. ElevenLabs ऑडियो",
+    howStep3Body: "स्वीकृत कार्ड से 60–90 सेकंड का अंग्रेज़ी सारांश पढ़ा जाता है, फिर ElevenLabs से उसे चीनी में डब किया जाता है। ऑडियो हर प्रस्ताव संस्करण के लिए सहेजा जाता है।",
+    howStep4Title: "4. Photon iMessage रिमाइंडर",
+    howStep4Body: "फ़ॉलो पर टैप करें, छोटा कोड हमारी iMessage लाइन पर भेजें, और बैठक से 24 घंटे पहले रिमाइंडर पाएँ। अगर बैठक की तारीख बदलती है या रद्द होती है, तो पुराना रिमाइंडर हटा दिया जाता है।",
+    howExplore: "प्रस्ताव देखें",
     addressClear: "पता हटाएँ",
     addressFind: "मेरा बोर्ड खोजें",
     addressInside: "{address} {board} में है।",
@@ -1657,6 +1720,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     whenItHappened: "कब",
   },
   ar: {
+    howStep1Title: "1. استيراد وثيقة رسمية",
+    howStep1Body: "يرفع أحد أعضاء الفريق ملف PDF أو صفحة ويب من المجلس المجتمعي مع رابطها الرسمي وتاريخ نشرها. يُحفظ النص صفحةً بصفحة.",
+    howStep2Title: "2. Grok يستخرج، وشخص يراجع",
+    howStep2Body: "يُعدّ Grok مسودة منظمة تشمل العنوان والموقع والمرحلة والتواريخ وطريقة المشاركة، ويجب أن يقتبس الصفحة التي جاءت منها كل معلومة. تُطابَق كل عبارة مقتبسة مع الوثيقة تلقائيًا، ويراجعها أحد أعضاء الفريق قبل النشر.",
+    howStep3Title: "3. صوت ElevenLabs",
+    howStep3Body: "يُقرأ ملخص باللغة الإنجليزية مدته 60 إلى 90 ثانية من البطاقة المعتمدة، ثم يُدبلج إلى الصينية باستخدام ElevenLabs. يُحفظ الصوت لكل نسخة من المقترح.",
+    howStep4Title: "4. تذكيرات iMessage عبر Photon",
+    howStep4Body: "اضغط على «متابعة»، وأرسل الرمز القصير إلى خط iMessage الخاص بنا، لتصلك رسالة تذكير قبل الاجتماع بـ 24 ساعة. إذا تغيّر موعد الاجتماع أو أُلغي، يُسحب التذكير القديم.",
+    howExplore: "استكشف المقترحات",
     addressClear: "مسح العنوان",
     addressFind: "ابحث عن مجلسي",
     addressInside: "{address} يقع في {board}.",
@@ -1751,6 +1823,15 @@ const extra: Record<Lang, Record<ExtraKey, string>> = {
     whenItHappened: "متى",
   },
   ru: {
+    howStep1Title: "1. Загрузка официального документа",
+    howStep1Body: "Участник команды загружает PDF или веб-страницу общественного совета с официальной ссылкой и датой публикации. Текст сохраняется постранично.",
+    howStep2Title: "2. Grok извлекает, человек проверяет",
+    howStep2Body: "Grok составляет структурированный черновик — название, место, этап, даты, как принять участие — и обязан процитировать страницу, откуда взят каждый факт. Каждая цитата автоматически сверяется с документом, а перед публикацией черновик проверяет участник команды.",
+    howStep3Title: "3. Аудио ElevenLabs",
+    howStep3Body: "По утверждённой карточке зачитывается сводка на английском длиной 60–90 секунд, затем ElevenLabs озвучивает её на китайском. Аудио сохраняется для каждой версии предложения.",
+    howStep4Title: "4. Напоминания в iMessage через Photon",
+    howStep4Body: "Нажмите «Следить», отправьте короткий код на нашу линию iMessage и получите напоминание за 24 часа до заседания. Если заседание перенесут или отменят, прежнее напоминание будет отозвано.",
+    howExplore: "Смотреть предложения",
     addressClear: "Очистить адрес",
     addressFind: "Найти мой совет",
     addressInside: "{address} находится в {board}.",
