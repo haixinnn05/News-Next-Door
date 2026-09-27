@@ -28,7 +28,7 @@ export function FollowPanel({ proposalId, title, requestFollow }: { proposalId: 
   const { user } = useAccount();
   const [f, setF] = useState<FollowResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<"waiting" | "confirmed" | "expired" | "unknown">("waiting");
+  const [status, setStatus] = useState<"waiting" | "confirmed" | "stopped" | "expired" | "unknown">("waiting");
   const [now, setNow] = useState(Date.now());
   const started = useRef(false);
 
@@ -47,8 +47,8 @@ export function FollowPanel({ proposalId, title, requestFollow }: { proposalId: 
   }, []);
 
   useEffect(() => {
-    if (status === "confirmed") markFollowed(proposalId);
-  }, [status, proposalId]);
+    if (status === "confirmed" && f) markFollowed(proposalId, f.code);
+  }, [status, proposalId, f]);
 
   useEffect(() => {
     if (!f || status !== "waiting") return;

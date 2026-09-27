@@ -107,7 +107,10 @@ test("follow → confirm → reminder scheduled; repeat is harmless; STOP cancel
 
   handleInbound(db, { providerEventId: "m3", handle: "+15550001111", spaceId: null, text: "STOP", transport: "simulator" });
   assert.equal(get<NotificationRow>(db, "SELECT * FROM notifications WHERE kind='reminder'")!.state, "cancelled");
-  assert.equal(get<{ active: number }>(db, "SELECT active FROM subscribers")!.active, 0);
+  assert.equal(get<{ active: number }>(db, "SELECT active FROM subscribers")!.active, 0);  assert.equal(followStatus(db, fc.code).status, "stopped");
+  // following again with a new code brings the old code back to confirmed
+  handleInbound(db, { providerEventId: "m4", handle: "+15550001111", spaceId: null, text: createFollowCode(db, proposal.id, "en").code, transport: "simulator" });
+  assert.equal(followStatus(db, fc.code).status, "confirmed");
 });
 
 test("rescheduling a meeting cancels the old reminder, schedules a new one, and drafts an update for review", async () => {

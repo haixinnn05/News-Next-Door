@@ -62,6 +62,7 @@ test("following a city application: code → confirmation; repeat is harmless; S
   queueAppDemoUpdate(db, "2023Q0177");
   handleInbound(db, inbound("STOP", "m3"));
   assert.equal(get<{ active: number }>(db, "SELECT active FROM app_subscriptions")!.active, 0);
+  assert.equal(followStatus(db, fc.code).status, "stopped");
   assert.ok(notes(db).filter((n) => n.kind === "update").every((n) => n.state === "cancelled"));
 });
 

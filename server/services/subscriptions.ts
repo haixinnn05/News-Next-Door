@@ -72,14 +72,15 @@ export function createAppFollowCode(db: Db, app: ZapApplication, language: TextL
   return get<AppFollowCodeRow>(db, "SELECT * FROM app_follow_codes WHERE code = ?", code)!;
 }
 
-export function followStatus(db: Db, code: string): { status: "waiting" | "confirmed" | "expired" | "unknown"; expires_at?: string } {
-  const row =
-    get<FollowCodeRow>(db, "SELECT * FROM follow_codes WHERE code = ?", code.toUpperCase()) ??
-    get<AppFollowCodeRow>(db, "SELECT * FROM app_follow_codes WHERE code = ?", code.toUpperCase());
+export function followStatus(db: Db, code: string): { status: "waiting" | "confirmed" | "stopped" | "expired" | "unknown"; expires_at?: string } {
+  const fc = get<FollowCodeRow>(db, "SELECT * FROM follow_codes WHERE code = ?", code.toUpperCase());
+  const row = fc ?? get<AppFollowCodeRow>(db, "SELECT * FROM app_follow_codes WHERE code = ?", code.toUpperCase());
   if (!row) return { status: "unknown" };
   if (row.used_at) {
-    // confirmed only once the confirmation reply has actually been processed by the backend
-    return { status: "confirmed" };
+    // confirmed only once the confirmation reply has actually been processed by the backend;
+    // "stopped" once the follow it created is no longer active (STOP), so the page can show Follow again
+    const sub = get<{ active: number }>(db, `SELECT active FROM ${fc ? "subscriptions" : "app_subscriptions"} WHERE id = ?`, row.subscription_id);
+    return { status: sub?.active ? "confirmed" : "stopped" };
   }
   if (Date.parse(row.expires_at) < Date.now()) return { status: "expired" };
   return { status: "waiting", expires_at: row.expires_at };

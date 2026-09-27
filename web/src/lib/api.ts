@@ -42,7 +42,7 @@ export const api = {
   followApp: (id: string, language: string) => request<FollowResponse>(`/api/applications/${encodeURIComponent(id)}/follow`, json("POST", { language })),
   proposal: (id: string) => request<ProposalDetail>(`/api/proposals/${id}`),
   follow: (id: string, language: string) => request<FollowResponse>(`/api/proposals/${id}/follow`, json("POST", { language })),
-  followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "expired" | "unknown" }>(`/api/follow/${code}`),
+  followStatus: (code: string) => request<{ status: "waiting" | "confirmed" | "stopped" | "expired" | "unknown" }>(`/api/follow/${code}`),
   simSend: (handle: string, text: string) => request<{ action: string }>("/api/sim/inbound", json("POST", { handle, text })),
   myProposals: (lang = "en") => request<MyProposals>(`/api/me/proposals?lang=${encodeURIComponent(lang)}`),
   zone: () => request<{ board_id: string | null }>("/api/me/zone"),
