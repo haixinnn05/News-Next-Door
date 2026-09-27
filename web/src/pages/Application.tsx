@@ -5,6 +5,7 @@ import { Icon } from "../components/Icon";
 import { NewsArticle } from "../components/NewsFeed";
 import { api } from "../lib/api";
 import { fmtDate } from "../lib/format";
+import { useFollowed } from "../lib/followed";
 import { useLang, type Key, type Lang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { Link } from "../lib/router";
@@ -29,6 +30,7 @@ export function ApplicationPage({ id }: { id: string }) {
   const res = useLoad(() => api.application(id), [id]);
   const app = res.data;
   const [following, setFollowing] = useState(false);
+  const followed = useFollowed(app?.id ?? id);
   if (res.loading && !app)
     return (
       <div className="news">
@@ -47,8 +49,8 @@ export function ApplicationPage({ id }: { id: string }) {
   const actions = (
     <div className="row" style={{ gap: 10 }}>
       <SaveButton proposalId={app.id} />
-      <button className="btn primary sm" onClick={() => setFollowing(true)}>
-        <Icon name="bell" size={15} /> {t("follow")}
+      <button className={`btn sm${followed ? " saved" : " primary"}`} aria-pressed={followed} onClick={() => setFollowing(true)}>
+        <Icon name={followed ? "check" : "bell"} size={15} /> {followed ? t("following") : t("follow")}
       </button>
     </div>
   );

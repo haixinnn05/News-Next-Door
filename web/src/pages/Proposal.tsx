@@ -8,6 +8,7 @@ import { useToast } from "../components/Toast";
 import { useAccount } from "../lib/account";
 import { api } from "../lib/api";
 import { eventTypeLabel, fmtDate, fmtEventWhen, fmtTime, stageLabel, summaryOf, titleOf } from "../lib/format";
+import { useFollowed } from "../lib/followed";
 import { useLang, type Lang } from "../lib/i18n";
 import { useLoad } from "../lib/meta";
 import { Link, useRouter } from "../lib/router";
@@ -63,6 +64,7 @@ export function ProposalPage({ id, tab }: { id: string; tab?: string }) {
   const toast = useToast();
   const res = useLoad(() => api.proposal(id), [id]);
   const [following, setFollowing] = useState(false);
+  const followed = useFollowed(res.data?.id ?? id);
   const active: Tab = (TABS.find((x) => x.key === tab)?.key ?? "overview") as Tab;
   const p = res.data;
 
@@ -115,8 +117,8 @@ export function ProposalPage({ id, tab }: { id: string; tab?: string }) {
             <Icon name="share" size={15} /> {t("share")}
           </button>
           <SaveButton proposalId={p.id} />
-          <button className="btn primary sm" onClick={() => setFollowing(true)}>
-            <Icon name="bell" size={15} /> {t("follow")}
+          <button className={`btn sm${followed ? " saved" : " primary"}`} aria-pressed={followed} onClick={() => setFollowing(true)}>
+            <Icon name={followed ? "check" : "bell"} size={15} /> {followed ? t("following") : t("follow")}
           </button>
         </div>
       </div>

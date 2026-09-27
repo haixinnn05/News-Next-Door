@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "../lib/account";
 import { api } from "../lib/api";
+import { markFollowed } from "../lib/followed";
 import { useLang } from "../lib/i18n";
 import { Link } from "../lib/router";
 import type { FollowResponse } from "../lib/types";
@@ -44,6 +45,10 @@ export function FollowPanel({ proposalId, title, requestFollow }: { proposalId: 
     start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (status === "confirmed") markFollowed(proposalId);
+  }, [status, proposalId]);
 
   useEffect(() => {
     if (!f || status !== "waiting") return;
